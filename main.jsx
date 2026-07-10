@@ -34,12 +34,13 @@ const PROGRAM_TYPES = ["School Visit", "Retreat", "Fellowship", "Mentoring", "Co
 
 const USERS = [
   { id: "nc", name: "National Coordinator", role: "NC", chapter: null, initials: "NC" },
-  { id: "rc-benin", name: "Chidi Okafor", role: "RC", chapter: "Benin", initials: "CO" },
-  { id: "rc-auchi", name: "Blessing Osagie", role: "RC", chapter: "Auchi", initials: "BO" },
-  { id: "rc-ondo", name: "Tunde Adeyemi", role: "RC", chapter: "Ondo", initials: "TA" },
-  { id: "rc-agbor", name: "Kenneth Onyeka", role: "RC", chapter: "Agbor", initials: "KO" },
-  { id: "rc-osun", name: "Funmi Adebayo", role: "RC", chapter: "Osun", initials: "FA" },
-  { id: "rc-lagos", name: "Ngozi Ikenna", role: "RC", chapter: "Lagos", initials: "NI" },
+  { id: "rc-benin", name: "George Djhorba", role: "RC", chapter: "Benin", initials: "CO" },
+  { id: "rc-auchi", name: "Aziyimele Evans", role: "RC", chapter: "Auchi", initials: "BO" },
+  { id: "rc-ondo", name: "Abisere Caleb", role: "RC", chapter: "Ondo", initials: "TA" },
+  { id: "rc-agbor", name: "Ebunoluwa Grace", role: "RC", chapter: "Agbor", initials: "KO" },
+  { id: "rc-osun", name: "Pastor Israel", role: "RC", chapter: "Osun", initials: "FA" },
+  { id: "rc-ibadan", name: "Ebunoluwa Grace", role: "RC", chapter: "Osun", initials: "FA" },
+  { id: "rc-lagos", name: "Tunde Godfrey Adewola", role: "RC", chapter: "Lagos", initials: "NI" },
 ];
 
 const SEED = [
