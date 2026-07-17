@@ -80,7 +80,7 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
         </Card>
       ) : null}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+      <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
         <Card>
           <SHead>Program details</SHead>
           {[

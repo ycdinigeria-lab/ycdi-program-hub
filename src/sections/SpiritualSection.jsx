@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { B } from "../theme.js";
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase.js";
+import { B, inp, btnP, btnG } from "../theme.js";
 import { Card, SHead } from "../components/ui.jsx";
 import { DISCIPLESHIP_STAGES, TEACHING_OUTLINE, CHARACTER_STANDARDS, PRAYER_CALENDAR, COUNSELLING_REFERRAL } from "../data/spiritual.js";
 
@@ -18,7 +19,7 @@ function DiscipleshipView() {
           </button>
         ))}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+      <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         <div>
           <div style={{ fontSize: 11, color: B.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6, fontFamily: "'Montserrat',sans-serif" }}>Description</div>
           <p style={{ margin: "0 0 12px", fontSize: 13, lineHeight: 1.7 }}>{s.desc}</p>
@@ -68,7 +69,7 @@ function CharacterView() {
     <Card style={{ marginBottom: 14 }}>
       <SHead color={B.purple}>Biblical ethics and conduct - ten character standards</SHead>
       <p style={{ fontSize: 13, color: B.muted, margin: "0 0 14px", lineHeight: 1.6 }}>Every YCDI leader is called to embody these ten Christ-formed character standards. Tap any to read in full.</p>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+      <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         {CHARACTER_STANDARDS.map((c, i) => (
           <div key={c.name} onClick={() => setActive(active === i ? null : i)} style={{ padding: "12px 14px", borderRadius: 8, border: "1.5px solid " + (active === i ? B.purple : B.border), cursor: "pointer", background: active === i ? B.purpleLight : B.white }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -86,25 +87,74 @@ function CharacterView() {
   );
 }
 
-function PrayerView() {
+function PrayerView({ profile, showToast }) {
+  const [notes, setNotes] = useState({});
+  const [editingKey, setEditingKey] = useState(null);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  const isNC = profile && profile.role === "NC";
+
+  useEffect(() => {
+    let ignore = false;
+    supabase.from("prayer_schedule_notes").select("*").then(({ data }) => {
+      if (ignore || !data) return;
+      const map = {};
+      data.forEach((r) => { map[r.meeting_key] = r.note; });
+      setNotes(map);
+    });
+    return () => { ignore = true; };
+  }, []);
+
+  function startEdit(item) {
+    setEditingKey(item.key);
+    setDraft(notes[item.key] ?? item.defaultSchedule ?? "");
+  }
+
+  async function saveEdit(item) {
+    const trimmed = draft.trim();
+    setBusy(true);
+    const { error } = await supabase.from("prayer_schedule_notes").upsert({ meeting_key: item.key, note: trimmed, updated_at: new Date().toISOString() });
+    setBusy(false);
+    if (error) { showToast && showToast("Could not save the schedule: " + error.message, "error"); return; }
+    setNotes((n) => ({ ...n, [item.key]: trimmed }));
+    setEditingKey(null);
+    showToast && showToast("Schedule updated.");
+  }
+
   return (
     <Card style={{ marginBottom: 14 }}>
       <SHead color={B.purple}>YCDI prayer and devotional calendar</SHead>
-      {PRAYER_CALENDAR.map((p, i) => (
-        <div key={p.meeting} style={{ padding: "12px 0", borderBottom: i < PRAYER_CALENDAR.length - 1 ? "1px solid " + B.offWhite : "none" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Montserrat',sans-serif" }}>{p.meeting}</div>
-              <div style={{ fontSize: 12, color: B.muted, marginTop: 3 }}>Led by: {p.led}</div>
-              <div style={{ fontSize: 12, marginTop: 4, lineHeight: 1.6 }}>{p.focus}</div>
-            </div>
-            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-              <span style={{ background: B.purpleLight, color: B.purple, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{p.frequency}</span>
-              <span style={{ background: B.offWhite, color: B.muted, padding: "3px 10px", borderRadius: 20, fontSize: 11 }}>{p.duration}</span>
+      {PRAYER_CALENDAR.map((p, i) => {
+        const schedule = notes[p.key] || p.defaultSchedule;
+        const isEditing = editingKey === p.key;
+        return (
+          <div key={p.key} style={{ padding: "12px 0", borderBottom: i < PRAYER_CALENDAR.length - 1 ? "1px solid " + B.offWhite : "none" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Montserrat',sans-serif" }}>{p.meeting}</div>
+                {isEditing ? (
+                  <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap", alignItems: "center" }}>
+                    <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="e.g. First Thursday of every month" style={{ ...inp, maxWidth: 260 }} />
+                    <button onClick={() => saveEdit(p)} disabled={busy} style={{ ...btnP, padding: "6px 12px", fontSize: 11, opacity: busy ? 0.6 : 1 }}>{busy ? "Saving…" : "Save"}</button>
+                    <button onClick={() => setEditingKey(null)} style={{ ...btnG, padding: "6px 12px", fontSize: 11 }}>Cancel</button>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 3, flexWrap: "wrap" }}>
+                    <div style={{ fontSize: 12, color: B.purple, fontWeight: 600 }}>{schedule}</div>
+                    {isNC ? <span onClick={() => startEdit(p)} style={{ fontSize: 11, color: B.blue, cursor: "pointer", textDecoration: "underline" }}>edit</span> : null}
+                  </div>
+                )}
+                <div style={{ fontSize: 12, color: B.muted, marginTop: 4 }}>Led by: {p.led}</div>
+                <div style={{ fontSize: 12, marginTop: 4, lineHeight: 1.6 }}>{p.focus}</div>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                <span style={{ background: B.purpleLight, color: B.purple, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{p.frequency}</span>
+                <span style={{ background: B.offWhite, color: B.muted, padding: "3px 10px", borderRadius: 20, fontSize: 11 }}>{p.duration}</span>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       <div style={{ marginTop: 16, background: B.purpleLight, borderRadius: 8, padding: "12px 14px" }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: B.purple, marginBottom: 8, fontFamily: "'Montserrat',sans-serif" }}>Personal devotional disciplines for all YCDI leaders:</div>
         {["Daily Bible reading using a structured reading plan", "Daily prayer - minimum 15 minutes", "Weekly church attendance as an active, serving member", "Monthly fasting - at least one day", "Annual personal spiritual retreat", "Journaling to capture what God is speaking"].map((d, i) => (
@@ -146,7 +196,7 @@ function CounsellingView() {
   );
 }
 
-export default function SpiritualSection() {
+export default function SpiritualSection({ profile, showToast }) {
   const [tab, setTab] = useState("discipleship");
   const TABS = [
     { id: "discipleship", label: "Discipleship Pathway" },
@@ -174,7 +224,7 @@ export default function SpiritualSection() {
       {tab === "discipleship" ? <DiscipleshipView /> : null}
       {tab === "teaching" ? <TeachingView /> : null}
       {tab === "character" ? <CharacterView /> : null}
-      {tab === "prayer" ? <PrayerView /> : null}
+      {tab === "prayer" ? <PrayerView profile={profile} showToast={showToast} /> : null}
       {tab === "counselling" ? <CounsellingView /> : null}
     </div>
   );

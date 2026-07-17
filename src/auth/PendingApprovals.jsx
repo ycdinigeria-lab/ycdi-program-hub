@@ -26,7 +26,7 @@ export default function PendingApprovals() {
   async function approve(row) {
     const role = roleChoice[row.id] || "RC";
     const chapterId = chapterChoice[row.id] || (chapters[0] && chapters[0].id);
-    if (role === "RC" && !chapterId) return;
+    if ((role === "RC" || role === "TM") && !chapterId) return;
     setBusyId(row.id);
     const { error: insErr } = await supabase.from("profiles").insert({
       id: row.id,
@@ -67,9 +67,10 @@ export default function PendingApprovals() {
                 style={{ padding: "6px 10px", borderRadius: 6, border: `1px solid ${B.border}`, fontSize: 12 }}
               >
                 <option value="RC">Regional Coordinator</option>
+                <option value="TM">Team Member</option>
                 <option value="NC">National Coordinator</option>
               </select>
-              {(roleChoice[row.id] || "RC") === "RC" ? (
+              {(roleChoice[row.id] || "RC") === "RC" || (roleChoice[row.id] || "RC") === "TM" ? (
                 <select
                   value={chapterChoice[row.id] || ""}
                   onChange={(e) => setChapterChoice((c) => ({ ...c, [row.id]: e.target.value }))}

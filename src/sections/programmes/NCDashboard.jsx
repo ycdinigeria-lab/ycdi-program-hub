@@ -37,7 +37,7 @@ export default function NCDashboard({ programs, chapters, onView }) {
 
       <PendingApprovals />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 260px", gap: 14 }}>
+      <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 260px", gap: 14 }}>
         <Card>
           <SHead>All programs</SHead>
           {programs.length === 0 ? (

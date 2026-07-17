@@ -29,12 +29,12 @@ export const CHARACTER_STANDARDS = [
 ];
 
 export const PRAYER_CALENDAR = [
-  { meeting: "Chapter Monthly Prayer", frequency: "Monthly", duration: "90 mins", led: "Regional Coordinator", focus: "Chapter programs, volunteers, students, local community" },
-  { meeting: "NEC Monthly Prayer", frequency: "Monthly", duration: "60 mins", led: "National Coordinator", focus: "National strategy, inter-chapter unity, leadership, finances" },
-  { meeting: "Board Prayer Meeting", frequency: "Quarterly", duration: "45 mins", led: "Board Chair", focus: "Governance, organizational direction, trustees personal lives" },
-  { meeting: "Pre-Program Prayer", frequency: "Before every program", duration: "30 mins", led: "Program Lead", focus: "Protection, anointing, open hearts among beneficiaries" },
-  { meeting: "National Day of Fasting", frequency: "Quarterly", duration: "Full day", led: "NC and Founder", focus: "National spiritual alignment, major organizational decisions" },
-  { meeting: "Annual Prayer Night", frequency: "Annually", duration: "Evening", led: "Founder / Senior Leadership", focus: "Year in review, consecration for new year, corporate intercession" },
+  { key: "chapter_monthly", meeting: "Chapter Monthly Prayer", frequency: "Monthly", duration: "90 mins", led: "Regional Coordinator", focus: "Chapter programs, volunteers, students, local community", defaultSchedule: "First Saturday of every month" },
+  { key: "nec_monthly", meeting: "NEC Monthly Prayer", frequency: "Monthly", duration: "60 mins", led: "National Coordinator", focus: "National strategy, inter-chapter unity, leadership, finances", defaultSchedule: "Third Monday of every month" },
+  { key: "board_prayer", meeting: "Board Prayer Meeting", frequency: "Quarterly", duration: "45 mins", led: "Board Chair", focus: "Governance, organizational direction, trustees personal lives", defaultSchedule: "Date set by the Board Chair each quarter" },
+  { key: "pre_program", meeting: "Pre-Program Prayer", frequency: "Before every program", duration: "30 mins", led: "Program Lead", focus: "Protection, anointing, open hearts among beneficiaries", defaultSchedule: "Scheduled ahead of each programme" },
+  { key: "national_fasting", meeting: "National Day of Fasting", frequency: "Quarterly", duration: "Full day", led: "NC and Founder", focus: "National spiritual alignment, major organizational decisions", defaultSchedule: "Last Friday of March, June, September and December" },
+  { key: "annual_prayer_night", meeting: "Annual Prayer Night", frequency: "Annually", duration: "Evening", led: "Founder / Senior Leadership", focus: "Year in review, consecration for new year, corporate intercession", defaultSchedule: "December, date confirmed annually" },
 ];
 
 export const COUNSELLING_REFERRAL = [

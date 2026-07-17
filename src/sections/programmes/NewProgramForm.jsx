@@ -40,7 +40,7 @@ export default function NewProgramForm({ profile, chapters, onSubmit, onCancel }
       {step === 1 ? (
         <>
           <Field label="Program title" required><input style={inp} value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="e.g. School outreach - Benin Central" /></Field>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <Field label="Chapter">
               {profile.role === "NC" ? (
                 <select style={sel} value={form.chapter} onChange={(e) => set("chapter", e.target.value)}>
@@ -56,7 +56,7 @@ export default function NewProgramForm({ profile, chapters, onSubmit, onCancel }
               </select>
             </Field>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <Field label="Date" required><input type="date" style={inp} value={form.date} onChange={(e) => set("date", e.target.value)} /></Field>
             <Field label="Estimated students" required><input type="number" style={inp} value={form.students} onChange={(e) => set("students", e.target.value)} placeholder="e.g. 80" /></Field>
           </div>

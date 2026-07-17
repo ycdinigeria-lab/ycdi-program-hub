@@ -48,7 +48,7 @@ export function Field({ label, children, required }) {
 
 export function StatCard({ label, value, accent }) {
   return (
-    <div style={{ background: B.white, border: "1px solid " + B.border, borderRadius: 8, padding: "14px 16px", flex: 1, borderTop: "3px solid " + (accent || B.blue) }}>
+    <div style={{ background: B.white, border: "1px solid " + B.border, borderRadius: 8, padding: "14px 16px", flex: "1 1 130px", borderTop: "3px solid " + (accent || B.blue) }}>
       <div style={{ fontSize: 11, color: B.muted, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</div>
       <div style={{ fontSize: 26, fontWeight: 700, color: accent || B.blue, fontFamily: "'Montserrat',sans-serif" }}>{value}</div>
     </div>

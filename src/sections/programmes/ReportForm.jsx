@@ -58,16 +58,16 @@ export default function ReportForm({ program, profile, onClose, onSaved, showToa
 
           {step === 0 ? (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <Field label="Report date" required><input type="date" style={inp} value={u.report_date} onChange={(e) => set("report_date", e.target.value)} /></Field>
                 <Field label="Reporting coordinator" required><input style={inp} value={u.reporting_coordinator} onChange={(e) => set("reporting_coordinator", e.target.value)} /></Field>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <Field label="Actual start time"><input type="time" style={inp} value={u.actual_start_time} onChange={(e) => set("actual_start_time", e.target.value)} /></Field>
                 <Field label="Actual end time"><input type="time" style={inp} value={u.actual_end_time} onChange={(e) => set("actual_end_time", e.target.value)} /></Field>
               </div>
               <Field label="Venue confirmed"><input style={inp} value={u.venue_confirmed} onChange={(e) => set("venue_confirmed", e.target.value)} placeholder="e.g. Yes, main hall as planned" /></Field>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <Field label="Pre-program prayer meeting held" required><YesNo value={u.prayer_meeting_held} onChange={(v) => set("prayer_meeting_held", v)} /></Field>
                 <Field label="Prayer meeting attendees"><input type="number" style={inp} value={u.prayer_meeting_attendees} onChange={(e) => set("prayer_meeting_attendees", e.target.value)} /></Field>
               </div>
@@ -76,17 +76,17 @@ export default function ReportForm({ program, profile, onClose, onSaved, showToa
 
           {step === 1 ? (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+              <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
                 <Field label="Total attendance" required><input type="number" style={inp} value={u.total_attendance} onChange={(e) => set("total_attendance", e.target.value)} /></Field>
                 <Field label="Male" required><input type="number" style={inp} value={u.male_count} onChange={(e) => set("male_count", e.target.value)} /></Field>
                 <Field label="Female" required><input type="number" style={inp} value={u.female_count} onChange={(e) => set("female_count", e.target.value)} /></Field>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+              <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
                 <Field label="Ages 10-14"><input type="number" style={inp} value={u.age_10_14} onChange={(e) => set("age_10_14", e.target.value)} /></Field>
                 <Field label="Ages 15-19"><input type="number" style={inp} value={u.age_15_19} onChange={(e) => set("age_15_19", e.target.value)} /></Field>
                 <Field label="Ages 20-25"><input type="number" style={inp} value={u.age_20_25} onChange={(e) => set("age_20_25", e.target.value)} /></Field>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <Field label="First-time attendees"><input type="number" style={inp} value={u.first_time_attendees} onChange={(e) => set("first_time_attendees", e.target.value)} /></Field>
                 <Field label="Returning attendees"><input type="number" style={inp} value={u.returning_attendees} onChange={(e) => set("returning_attendees", e.target.value)} /></Field>
               </div>
@@ -97,7 +97,7 @@ export default function ReportForm({ program, profile, onClose, onSaved, showToa
 
           {step === 2 ? (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <Field label="Program ran as planned" required><YesNo value={u.program_ran_as_planned} onChange={(v) => set("program_ran_as_planned", v)} /></Field>
                 <Field label="Teaching method"><select style={sel} value={u.teaching_method} onChange={(e) => set("teaching_method", e.target.value)}><option value="">Select...</option>{TEACHING_METHOD_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}</select></Field>
               </div>
@@ -118,7 +118,7 @@ export default function ReportForm({ program, profile, onClose, onSaved, showToa
 
           {step === 3 ? (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12 }}>
+              <div className="rcol2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12 }}>
                 <Field label="New commitments"><input type="number" style={inp} value={u.commitments_to_christ} onChange={(e) => set("commitments_to_christ", e.target.value)} /></Field>
                 <Field label="Recommitments"><input type="number" style={inp} value={u.recommitments} onChange={(e) => set("recommitments", e.target.value)} /></Field>
                 <Field label="Testimonials"><input type="number" style={inp} value={u.testimonials_count} onChange={(e) => set("testimonials_count", e.target.value)} /></Field>
@@ -132,11 +132,11 @@ export default function ReportForm({ program, profile, onClose, onSaved, showToa
 
           {step === 4 ? (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <Field label="Two-volunteer rule observed" required><YesNo value={u.two_volunteer_rule_observed} onChange={(v) => set("two_volunteer_rule_observed", v)} /></Field>
                 <Field label="Parental consents obtained"><YesNo value={u.parental_consents_obtained} onChange={(v) => set("parental_consents_obtained", v)} /></Field>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <Field label="School permission obtained"><YesNo value={u.school_permission_obtained} onChange={(v) => set("school_permission_obtained", v)} /></Field>
                 <Field label="Incidents occurred" required><YesNo value={u.incidents_occurred} onChange={(v) => set("incidents_occurred", v)} /></Field>
               </div>
@@ -152,12 +152,12 @@ export default function ReportForm({ program, profile, onClose, onSaved, showToa
 
           {step === 5 ? (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <Field label="Approved budget (NGN)"><input type="number" style={inp} value={u.budget_approved} onChange={(e) => set("budget_approved", e.target.value)} /></Field>
                 <Field label="Actual expenditure (NGN)" required><input type="number" style={inp} value={u.actual_expenditure} onChange={(e) => set("actual_expenditure", e.target.value)} /></Field>
               </div>
               <Field label="Variance explanation"><textarea style={ta} value={u.variance_explanation} onChange={(e) => set("variance_explanation", e.target.value)} /></Field>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <Field label="Receipts obtained" required><YesNo value={u.receipts_obtained} onChange={(v) => set("receipts_obtained", v)} /></Field>
                 <Field label="Outstanding payments"><input style={inp} value={u.outstanding_payments} onChange={(e) => set("outstanding_payments", e.target.value)} /></Field>
               </div>
@@ -169,7 +169,7 @@ export default function ReportForm({ program, profile, onClose, onSaved, showToa
               <Field label="What went well" required><textarea style={ta} value={u.what_went_well} onChange={(e) => set("what_went_well", e.target.value)} /></Field>
               <Field label="What could be improved" required><textarea style={ta} value={u.what_could_improve} onChange={(e) => set("what_could_improve", e.target.value)} /></Field>
               <Field label="Recommendations"><textarea style={ta} value={u.recommendations} onChange={(e) => set("recommendations", e.target.value)} /></Field>
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 12 }}>
+              <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 12 }}>
                 <Field label="Follow-up actions"><input style={inp} value={u.follow_up_actions} onChange={(e) => set("follow_up_actions", e.target.value)} /></Field>
                 <Field label="Responsible"><input style={inp} value={u.follow_up_responsible} onChange={(e) => set("follow_up_responsible", e.target.value)} /></Field>
                 <Field label="Deadline"><input type="date" style={inp} value={u.follow_up_deadline} onChange={(e) => set("follow_up_deadline", e.target.value)} /></Field>
