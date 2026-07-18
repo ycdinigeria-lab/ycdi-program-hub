@@ -10,6 +10,7 @@ import SpiritualSection from "./sections/SpiritualSection.jsx";
 import ProgrammesSection from "./sections/programmes/ProgrammesSection.jsx";
 import PrayerManualSection from "./sections/PrayerManualSection.jsx";
 import DirectorySection from "./sections/DirectorySection.jsx";
+import CalendarNoticesSection from "./sections/CalendarNoticesSection.jsx";
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -89,6 +90,7 @@ export default function App() {
     if (section === "spiritual") return "Spiritual Ministry Framework";
     if (section === "prayer") return "Prayer Manual";
     if (section === "directory") return "People Directory";
+    if (section === "calendar") return "Calendar & Notices";
     return profile.role === "NC" ? "National Overview" : profile.chapter_name + " Chapter";
   }
 
@@ -111,6 +113,7 @@ export default function App() {
           { id: "spiritual", label: "Spiritual Ministry" },
           { id: "prayer", label: "Prayer Manual" },
           { id: "directory", label: "Directory" },
+          { id: "calendar", label: "Calendar & Notices" },
         ].filter((t) => t.id !== "programmes" || profile.role !== "TM");
         const tabBtn = (t) => (
           <button key={t.id} onClick={() => setSection(t.id)} style={{ background: "none", border: "none", borderBottom: `3px solid ${section === t.id ? B.yellow : "transparent"}`, color: section === t.id ? B.white : "rgba(255,255,255,0.65)", padding: "14px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Montserrat',sans-serif", fontWeight: section === t.id ? 700 : 400, whiteSpace: "nowrap", flexShrink: 0 }}>
@@ -179,6 +182,7 @@ export default function App() {
         {section === "spiritual" ? <SpiritualSection profile={profile} showToast={showToast} /> : null}
         {section === "prayer" ? <PrayerManualSection /> : null}
         {section === "directory" ? <DirectorySection profile={profile} chapters={chapters} showToast={showToast} /> : null}
+        {section === "calendar" ? <CalendarNoticesSection profile={profile} chapters={chapters} showToast={showToast} /> : null}
       </div>
 
       <div style={{ background: B.black, color: "rgba(255,255,255,0.4)", padding: "14px 24px", textAlign: "center", fontSize: 11, marginTop: 40 }}>
