@@ -2,6 +2,7 @@ import { B } from "../theme.js";
 import DocumentsSection from "./DocumentsSection.jsx";
 import CalendarNoticesSection from "./CalendarNoticesSection.jsx";
 import AdminSection from "./AdminSection.jsx";
+import MessagingSection from "./MessagingSection.jsx";
 
 // Everything that lives behind the "More" tab. New features get added here
 // instead of adding another button to the top navigation, which was already
@@ -40,7 +41,7 @@ export const MORE_FEATURES = [
     blurb: "Direct messages and chapter channels, so conversations stop living on WhatsApp.",
     icon: ICONS.chat,
     accent: B.purple,
-    soon: true,
+    render: (props) => <MessagingSection {...props} />,
   },
   {
     id: "admin",
