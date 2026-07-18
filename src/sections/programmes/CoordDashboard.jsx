@@ -7,7 +7,7 @@ export default function CoordDashboard({ programs, profile, onView, onNew, onRep
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+      <div className="rstats" style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
         <StatCard label="My programs" value={mine.length} />
         <StatCard label="Students this month" value={mine.reduce((s, p) => s + p.students, 0)} />
         <StatCard label="Awaiting NC approval" value={mine.filter((p) => p.status === "Pending").length} accent={mine.filter((p) => p.status === "Pending").length > 0 ? B.gold : B.blue} />

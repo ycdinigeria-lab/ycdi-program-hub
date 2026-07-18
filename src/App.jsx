@@ -104,16 +104,17 @@ export default function App() {
         @media (max-width: 760px) {
           .rcol1 { grid-template-columns: 1fr !important; }
           .rcol2 { grid-template-columns: repeat(2, 1fr) !important; }
+          .rstats { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; }
         }
       `}</style>
 
       {(() => {
         const TABS = [
-          { id: "programmes", label: "Programme Operations" },
-          { id: "spiritual", label: "Spiritual Ministry" },
-          { id: "prayer", label: "Prayer Manual" },
-          { id: "directory", label: "Directory" },
-          { id: "calendar", label: "Calendar & Notices" },
+          { id: "programmes", label: "Programme Operations", short: "Programmes" },
+          { id: "spiritual", label: "Spiritual Ministry", short: "Spiritual" },
+          { id: "prayer", label: "Prayer Manual", short: "Prayer" },
+          { id: "directory", label: "Directory", short: "Directory" },
+          { id: "calendar", label: "Calendar & Notices", short: "Calendar" },
         ].filter((t) => t.id !== "programmes" || profile.role !== "TM");
         const tabBtn = (t) => (
           <button key={t.id} onClick={() => setSection(t.id)} style={{ background: "none", border: "none", borderBottom: `3px solid ${section === t.id ? B.yellow : "transparent"}`, color: section === t.id ? B.white : "rgba(255,255,255,0.65)", padding: "14px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Montserrat',sans-serif", fontWeight: section === t.id ? 700 : 400, whiteSpace: "nowrap", flexShrink: 0 }}>
@@ -138,19 +139,38 @@ export default function App() {
         if (isMobile) {
           return (
             <div style={{ position: "sticky", top: 0, zIndex: 100 }}>
-              <div style={{ background: B.blue, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 14px", gap: 10 }}>
-                <YCDILogo height={34} dark markOnly />
+              <div style={{ background: B.blue, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", gap: 10 }}>
+                <YCDILogo height={32} dark markOnly />
                 {userBlock}
               </div>
-              <div style={{ background: B.blueDark, padding: "8px 14px", borderTop: "1px solid rgba(255,255,255,0.15)", position: "relative" }}>
-                <select
-                  value={section}
-                  onChange={(e) => setSection(e.target.value)}
-                  aria-label="Choose a section"
-                  style={{ width: "100%", background: B.white, color: B.black, border: "none", borderRadius: 6, padding: "9px 34px 9px 12px", fontSize: 13, fontWeight: 700, fontFamily: "'Montserrat',sans-serif", cursor: "pointer" }}
-                >
-                  {TABS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
-                </select>
+              <div style={{ background: B.blue, display: "flex", flexWrap: "wrap", gap: 6, padding: "0 10px 10px", borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: 10 }}>
+                {TABS.map((t) => {
+                  const on = section === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => setSection(t.id)}
+                      style={{
+                        flex: "1 1 28%",
+                        minWidth: 0,
+                        background: on ? B.white : "rgba(255,255,255,0.14)",
+                        color: on ? B.blueDark : "rgba(255,255,255,0.9)",
+                        border: "none",
+                        borderRadius: 20,
+                        padding: "9px 8px",
+                        fontSize: 12,
+                        fontFamily: "'Montserrat',sans-serif",
+                        fontWeight: on ? 700 : 600,
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {t.short || t.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           );

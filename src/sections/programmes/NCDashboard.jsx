@@ -13,7 +13,7 @@ export default function NCDashboard({ programs, chapters, onView }) {
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+      <div className="rstats" style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
         <StatCard label="Total programs" value={programs.length} />
         <StatCard label="Students planned" value={programs.reduce((s, p) => s + p.students, 0).toLocaleString()} />
         <StatCard label="Awaiting approval" value={pending.length} accent={pending.length > 0 ? B.yellow : B.blue} />
@@ -61,11 +61,13 @@ export default function NCDashboard({ programs, chapters, onView }) {
 
         <Card>
           <SHead>Students by chapter</SHead>
-          {byChapter.sort((a, b) => b.n - a.n).map(({ c, n }) => (
-            <div key={c} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, fontSize: 12 }}>
-              <span style={{ width: 44, color: B.muted }}>{c}</span>
+          {byChapter.slice().sort((a, b) => b.n - a.n).map(({ c, n }) => (
+            <div key={c} style={{ marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 5 }}>
+                <span style={{ fontSize: 12, color: B.muted, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: B.blue, flexShrink: 0, fontFamily: "'Montserrat',sans-serif" }}>{n}</span>
+              </div>
               <MiniBar value={n} max={maxStudents} />
-              <span style={{ width: 30, textAlign: "right", fontWeight: 700, color: B.blue }}>{n}</span>
             </div>
           ))}
         </Card>
