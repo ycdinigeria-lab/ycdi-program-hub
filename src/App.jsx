@@ -11,6 +11,7 @@ import ProgrammesSection from "./sections/programmes/ProgrammesSection.jsx";
 import PrayerManualSection from "./sections/PrayerManualSection.jsx";
 import DirectorySection from "./sections/DirectorySection.jsx";
 import CalendarNoticesSection from "./sections/CalendarNoticesSection.jsx";
+import MoreSection, { moreFeatureTitle } from "./sections/MoreSection.jsx";
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -18,8 +19,16 @@ export default function App() {
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [section, setSection] = useState("programmes");
+  const [moreView, setMoreView] = useState(null);
   const [toast, setToast] = useState(null);
   const isMobile = useIsMobile();
+
+  // Leaving the More tab closes whatever was open inside it, so coming back
+  // always lands on the list of features rather than mid-way into one.
+  function goToSection(id) {
+    if (id !== "more") setMoreView(null);
+    setSection(id);
+  }
 
   function showToast(msg, type) {
     setToast({ msg, type: type || "success" });
@@ -64,6 +73,7 @@ export default function App() {
 
   async function signOut() {
     await supabase.auth.signOut();
+    setMoreView(null);
     setSection("programmes");
   }
 
@@ -91,6 +101,7 @@ export default function App() {
     if (section === "prayer") return "Prayer Manual";
     if (section === "directory") return "People Directory";
     if (section === "calendar") return "Calendar & Notices";
+    if (section === "more") return moreView ? moreFeatureTitle(moreView) : "More";
     return profile.role === "NC" ? "National Overview" : profile.chapter_name + " Chapter";
   }
 
@@ -115,9 +126,10 @@ export default function App() {
           { id: "prayer", label: "Prayer Manual", short: "Prayer" },
           { id: "directory", label: "Directory", short: "Directory" },
           { id: "calendar", label: "Calendar & Notices", short: "Calendar" },
+          { id: "more", label: "More", short: "More" },
         ].filter((t) => t.id !== "programmes" || profile.role !== "TM");
         const tabBtn = (t) => (
-          <button key={t.id} onClick={() => setSection(t.id)} style={{ background: "none", border: "none", borderBottom: `3px solid ${section === t.id ? B.yellow : "transparent"}`, color: section === t.id ? B.white : "rgba(255,255,255,0.65)", padding: "14px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Montserrat',sans-serif", fontWeight: section === t.id ? 700 : 400, whiteSpace: "nowrap", flexShrink: 0 }}>
+          <button key={t.id} onClick={() => goToSection(t.id)} style={{ background: "none", border: "none", borderBottom: `3px solid ${section === t.id ? B.yellow : "transparent"}`, color: section === t.id ? B.white : "rgba(255,255,255,0.65)", padding: "14px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Montserrat',sans-serif", fontWeight: section === t.id ? 700 : 400, whiteSpace: "nowrap", flexShrink: 0 }}>
             {t.label}
           </button>
         );
@@ -149,7 +161,7 @@ export default function App() {
                   return (
                     <button
                       key={t.id}
-                      onClick={() => setSection(t.id)}
+                      onClick={() => goToSection(t.id)}
                       style={{
                         flex: "1 1 28%",
                         minWidth: 0,
@@ -203,6 +215,7 @@ export default function App() {
         {section === "prayer" ? <PrayerManualSection /> : null}
         {section === "directory" ? <DirectorySection profile={profile} chapters={chapters} showToast={showToast} /> : null}
         {section === "calendar" ? <CalendarNoticesSection profile={profile} chapters={chapters} showToast={showToast} /> : null}
+        {section === "more" ? <MoreSection profile={profile} chapters={chapters} showToast={showToast} view={moreView} setView={setMoreView} /> : null}
       </div>
 
       <div style={{ background: B.black, color: "rgba(255,255,255,0.4)", padding: "14px 24px", textAlign: "center", fontSize: 11, marginTop: 40 }}>
