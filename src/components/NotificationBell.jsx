@@ -35,6 +35,8 @@ export default function NotificationBell({ onOpen, isMobile }) {
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState(null);
+  const [savingMode, setSavingMode] = useState(false);
   const wrapRef = useRef(null);
 
   const loadCount = useCallback(async () => {
@@ -76,10 +78,24 @@ export default function NotificationBell({ onOpen, isMobile }) {
     };
   }, [open]);
 
+  async function loadMode() {
+    const { data, error } = await supabase.rpc("my_notification_pref");
+    if (!error && data) setMode(data);
+  }
+
+  async function pickMode(next) {
+    const before = mode;
+    setMode(next);
+    setSavingMode(true);
+    const { error } = await supabase.rpc("set_notification_pref", { mode: next });
+    setSavingMode(false);
+    if (error) { setMode(before); reportError(error, "notifications:setPref"); }
+  }
+
   function toggle() {
     const next = !open;
     setOpen(next);
-    if (next) loadItems();
+    if (next) { loadItems(); if (mode === null) loadMode(); }
   }
 
   async function markAll() {
@@ -199,6 +215,44 @@ export default function NotificationBell({ onOpen, isMobile }) {
                 </button>
               ))
             )}
+          </div>
+
+          <div style={{ borderTop: "1px solid " + B.offWhite, padding: "9px 12px 11px", flexShrink: 0, background: "#FAFAFA" }}>
+            <div style={{ fontSize: 10.5, color: B.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: "'Montserrat',sans-serif", fontWeight: 700 }}>
+              Email me
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {[
+                { id: "instant", label: "Each time" },
+                { id: "daily", label: "Daily summary" },
+                { id: "off", label: "Never" },
+              ].map((o) => {
+                const on = mode === o.id;
+                return (
+                  <button
+                    key={o.id}
+                    onClick={() => pickMode(o.id)}
+                    disabled={savingMode || mode === null}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      background: on ? B.blue : B.white,
+                      color: on ? B.white : B.muted,
+                      border: "1px solid " + (on ? B.blue : B.border),
+                      borderRadius: 6,
+                      padding: "6px 4px",
+                      fontSize: 11,
+                      fontWeight: on ? 700 : 400,
+                      cursor: mode === null ? "default" : "pointer",
+                      fontFamily: "'Open Sans',sans-serif",
+                      opacity: mode === null ? 0.5 : 1,
+                    }}
+                  >
+                    {o.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       ) : null}

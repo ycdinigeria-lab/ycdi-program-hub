@@ -12,6 +12,7 @@ su postgres -c "PATH=/usr/lib/postgresql/16/bin:\$PATH; psql -h /tmp/pg -d postg
 su postgres -c "PATH=/usr/lib/postgresql/16/bin:\$PATH; psql -h /tmp/pg -d postgres -c 'create database ycdi;'" >/dev/null
 R=/home/claude/hub
 for f in _harness/00-supabase-mock.sql \
+         _harness/20-net-vault-mock.sql \
          ycdi-final-db-setup.sql \
          stage1-prayer-schedule-notes.sql \
          stage2-calendar-announcements.sql \
