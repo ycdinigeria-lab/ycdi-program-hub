@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../lib/supabase.js";
 import { B, btnG } from "../theme.js";
 import { Card } from "../components/ui.jsx";
+import CrashLog from "./CrashLog.jsx";
 
 const ROLE_LABEL = { NC: "National Coordinator", RC: "Regional Coordinator", TM: "Team Member" };
 
@@ -11,6 +12,7 @@ export default function AdminSection({ profile, showToast }) {
   const [err, setErr] = useState("");
   const [q, setQ] = useState("");
   const [busyId, setBusyId] = useState(null);
+  const [tab, setTab] = useState("admins");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -52,8 +54,25 @@ export default function AdminSection({ profile, showToast }) {
 
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: B.muted }}>Loading members…</div>;
 
+  const tabBtn = (id, label) => (
+    <button
+      key={id}
+      onClick={() => setTab(id)}
+      style={{ padding: "7px 15px", borderRadius: 20, border: "1.5px solid " + (tab === id ? B.blue : B.border), background: tab === id ? B.blue : B.white, color: tab === id ? B.white : B.muted, fontSize: 12.5, fontWeight: tab === id ? 700 : 400, cursor: "pointer", fontFamily: "'Montserrat',sans-serif" }}
+    >
+      {label}
+    </button>
+  );
+
   return (
     <div>
+      <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 18 }}>
+        {tabBtn("admins", "Admins")}
+        {tabBtn("crashes", "Crash log")}
+      </div>
+
+      {tab === "crashes" ? <CrashLog showToast={showToast} /> : (
+      <>
       <Card style={{ background: B.blueLight, borderColor: B.blue + "30", marginBottom: 18 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: B.blueDark, fontFamily: "'Montserrat',sans-serif", marginBottom: 4 }}>Manage Admins</div>
         <p style={{ margin: 0, fontSize: 12, color: B.muted, lineHeight: 1.7 }}>
@@ -97,6 +116,8 @@ export default function AdminSection({ profile, showToast }) {
             </button>
           </div>
         ))
+      )}
+      </>
       )}
     </div>
   );

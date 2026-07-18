@@ -6,6 +6,9 @@ import { Avatar, YCDILogo, Toast } from "./components/ui.jsx";
 import LoginScreen from "./auth/LoginScreen.jsx";
 import SignupPending from "./auth/SignupPending.jsx";
 import PendingApprovals from "./auth/PendingApprovals.jsx";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import { useOnline } from "./useOnline.js";
+import { humanise } from "./lib/errors.js";
 import SpiritualSection from "./sections/SpiritualSection.jsx";
 import ProgrammesSection from "./sections/programmes/ProgrammesSection.jsx";
 import PrayerManualSection from "./sections/PrayerManualSection.jsx";
@@ -21,6 +24,7 @@ export default function App() {
   const [moreView, setMoreView] = useState(null);
   const [toast, setToast] = useState(null);
   const isMobile = useIsMobile();
+  const online = useOnline();
 
   // Leaving the More tab closes whatever was open inside it, so coming back
   // always lands on the list of features rather than mid-way into one.
@@ -30,7 +34,10 @@ export default function App() {
   }
 
   function showToast(msg, type) {
-    setToast({ msg, type: type || "success" });
+    // Errors get turned into plain language here rather than at each of
+    // the several dozen places that raise one.
+    const text = type === "error" ? humanise(msg) : msg;
+    setToast({ msg: text, type: type || "success" });
     setTimeout(() => setToast(null), 4000);
   }
 
@@ -220,21 +227,36 @@ export default function App() {
 
       <div style={{ background: B.yellow, height: 4 }} />
 
+      {!online ? (
+        <div style={{ background: "#3A3A3A", color: "#fff", padding: "8px 14px", fontSize: 12, textAlign: "center", lineHeight: 1.5 }}>
+          You're offline. You can still read what's already loaded, but nothing will save until the connection is back.
+        </div>
+      ) : null}
+
       <div style={{ padding: isMobile ? "16px 14px" : "24px", maxWidth: 980, margin: "0 auto", boxSizing: "border-box" }}>
         <div style={{ marginBottom: 22 }}>
           <h1 style={{ margin: 0, fontSize: isMobile ? 19 : 22, fontWeight: 700, color: B.black, fontFamily: "'Montserrat',sans-serif" }}>{pageTitle()}</h1>
           <div style={{ fontSize: 12, color: B.muted, marginTop: 3 }}>YCDI - {new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</div>
         </div>
 
-        {profile.is_admin ? <PendingApprovals /> : null}
-
-        {section === "programmes" && profile.role !== "TM" ? (
-          <ProgrammesSection profile={profile} chapters={chapters} showToast={showToast} />
+        {profile.is_admin ? (
+          <ErrorBoundary label="Sign-up requests" fullName={profile.full_name}><PendingApprovals /></ErrorBoundary>
         ) : null}
-        {section === "spiritual" ? <SpiritualSection profile={profile} showToast={showToast} /> : null}
-        {section === "prayer" ? <PrayerManualSection /> : null}
-        {section === "directory" ? <DirectorySection profile={profile} chapters={chapters} showToast={showToast} /> : null}
-        {section === "more" ? <MoreSection profile={profile} chapters={chapters} showToast={showToast} view={moreView} setView={setMoreView} /> : null}
+
+        <ErrorBoundary
+          key={section + ":" + (moreView || "")}
+          label={pageTitle()}
+          fullName={profile.full_name}
+          onBack={() => goToSection("programmes")}
+        >
+          {section === "programmes" && profile.role !== "TM" ? (
+            <ProgrammesSection profile={profile} chapters={chapters} showToast={showToast} />
+          ) : null}
+          {section === "spiritual" ? <SpiritualSection profile={profile} showToast={showToast} /> : null}
+          {section === "prayer" ? <PrayerManualSection /> : null}
+          {section === "directory" ? <DirectorySection profile={profile} chapters={chapters} showToast={showToast} /> : null}
+          {section === "more" ? <MoreSection profile={profile} chapters={chapters} showToast={showToast} view={moreView} setView={setMoreView} /> : null}
+        </ErrorBoundary>
       </div>
 
       <div style={{ background: B.black, color: "rgba(255,255,255,0.4)", padding: "14px 24px", textAlign: "center", fontSize: 11, marginTop: 40 }}>
