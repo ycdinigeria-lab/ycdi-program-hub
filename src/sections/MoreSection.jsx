@@ -4,6 +4,7 @@ import CalendarNoticesSection from "./CalendarNoticesSection.jsx";
 import AdminSection from "./AdminSection.jsx";
 import MessagingSection from "./MessagingSection.jsx";
 import ParticipantsSection from "./ParticipantsSection.jsx";
+import SafeguardingSection from "./SafeguardingSection.jsx";
 
 // Everything that lives behind the "More" tab. New features get added here
 // instead of adding another button to the top navigation, which was already
@@ -17,6 +18,7 @@ const ICONS = {
   chat: "M4 3h16a2 2 0 012 2v10a2 2 0 01-2 2H9l-5 4V5a2 2 0 010-2zm3 6h10v1.8H7zm0 3.4h7V14H7z",
   calendar: "M7 2v2h10V2h2v2h1a2 2 0 012 2v14a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2h1V2zM4 9v11h16V9zm2.5 2.5h3v3h-3zm5.5 0h3v3h-3z",
   people: "M12 12a4 4 0 100-8 4 4 0 000 8zm-8 9a8 8 0 0116 0v1H4zm14.5-9a3 3 0 100-6 3 3 0 000 6zM19 13c2.5 0 4 1.8 4 4v1h-3.2v-1c0-1.6-.6-3-1.6-4z",
+  shield: "M12 2l8 4v6c0 5-3.4 8.7-8 10-4.6-1.3-8-5-8-10V6zm0 2.2L6 6.9v5.1c0 3.8 2.4 6.6 6 7.7 3.6-1.1 6-3.9 6-7.7V6.9zM11 7h2v6h-2zm0 8h2v2h-2z",
   admin: "M12 2l8 4v6c0 5-3.4 8.7-8 10-4.6-1.3-8-5-8-10V6zm0 2.2L6 6.9v5.1c0 3.8 2.4 6.6 6 7.7 3.6-1.1 6-3.9 6-7.7V6.9zM11 15.5l-3-3 1.4-1.4L11 12.6l3.6-3.6L16 10.4z",
 };
 
@@ -58,6 +60,18 @@ export const MORE_FEATURES = [
     // they cannot open.
     roles: ["NC", "RC"],
     render: (props) => <ParticipantsSection {...props} />,
+  },
+  {
+    id: "safeguarding",
+    title: "Safeguarding",
+    blurb: "Report a concern, follow the register, and see who is cleared to work with children.",
+    icon: ICONS.shield,
+    accent: B.red,
+    // Access here follows YCDI-SAF-004, not the app's usual admin rule.
+    // Only the Designated Safeguarding Officers and the Board
+    // Safeguarding Chair. The database enforces it as well.
+    roles: ["NC", "RC"],
+    render: (props) => <SafeguardingSection {...props} />,
   },
   {
     id: "admin",
@@ -118,7 +132,11 @@ export default function MoreSection({ profile, chapters, showToast, view, setVie
   // pattern used for the Governance and Legal document category.
   const visibleFeatures = MORE_FEATURES.filter((f) => {
     if (f.adminOnly && !profile.is_admin) return false;
-    if (f.roles && !profile.is_admin && !f.roles.includes(profile.role)) return false;
+    if (f.roles) {
+      const allowed = f.roles.includes(profile.role)
+        || (f.id === "safeguarding" ? profile.is_safeguarding_lead : profile.is_admin);
+      if (!allowed) return false;
+    }
     return true;
   });
   const active = visibleFeatures.find((f) => f.id === view && !f.soon);
