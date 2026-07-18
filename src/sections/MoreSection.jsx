@@ -3,6 +3,7 @@ import DocumentsSection from "./DocumentsSection.jsx";
 import CalendarNoticesSection from "./CalendarNoticesSection.jsx";
 import AdminSection from "./AdminSection.jsx";
 import MessagingSection from "./MessagingSection.jsx";
+import ParticipantsSection from "./ParticipantsSection.jsx";
 
 // Everything that lives behind the "More" tab. New features get added here
 // instead of adding another button to the top navigation, which was already
@@ -15,6 +16,7 @@ const ICONS = {
   docs: "M6 2h7l5 5v15H6zm7 1.5V8h4.5zM8 12h8v1.6H8zm0 3.4h8V17H8zm0-6.8h4v1.6H8z",
   chat: "M4 3h16a2 2 0 012 2v10a2 2 0 01-2 2H9l-5 4V5a2 2 0 010-2zm3 6h10v1.8H7zm0 3.4h7V14H7z",
   calendar: "M7 2v2h10V2h2v2h1a2 2 0 012 2v14a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2h1V2zM4 9v11h16V9zm2.5 2.5h3v3h-3zm5.5 0h3v3h-3z",
+  people: "M12 12a4 4 0 100-8 4 4 0 000 8zm-8 9a8 8 0 0116 0v1H4zm14.5-9a3 3 0 100-6 3 3 0 000 6zM19 13c2.5 0 4 1.8 4 4v1h-3.2v-1c0-1.6-.6-3-1.6-4z",
   admin: "M12 2l8 4v6c0 5-3.4 8.7-8 10-4.6-1.3-8-5-8-10V6zm0 2.2L6 6.9v5.1c0 3.8 2.4 6.6 6 7.7 3.6-1.1 6-3.9 6-7.7V6.9zM11 15.5l-3-3 1.4-1.4L11 12.6l3.6-3.6L16 10.4z",
 };
 
@@ -42,6 +44,20 @@ export const MORE_FEATURES = [
     icon: ICONS.chat,
     accent: B.purple,
     render: (props) => <MessagingSection {...props} />,
+  },
+  {
+    id: "participants",
+    title: "Participants & Discipleship",
+    blurb: "Young people, where they are on the five stages, consent on file, and who is walking with them.",
+    icon: ICONS.people,
+    accent: B.green,
+    // Team Members are deliberately excluded. YCDI's Data Protection
+    // Policy says volunteers should not hold beneficiary data beyond
+    // what their own role requires, and this is not their role. The
+    // database refuses them too; this just stops them seeing a door
+    // they cannot open.
+    roles: ["NC", "RC"],
+    render: (props) => <ParticipantsSection {...props} />,
   },
   {
     id: "admin",
@@ -100,7 +116,11 @@ function FeatureCard({ f, onOpen }) {
 export default function MoreSection({ profile, chapters, showToast, view, setView }) {
   // Admin-only cards are absent entirely for everyone else, the same
   // pattern used for the Governance and Legal document category.
-  const visibleFeatures = MORE_FEATURES.filter((f) => !f.adminOnly || profile.is_admin);
+  const visibleFeatures = MORE_FEATURES.filter((f) => {
+    if (f.adminOnly && !profile.is_admin) return false;
+    if (f.roles && !profile.is_admin && !f.roles.includes(profile.role)) return false;
+    return true;
+  });
   const active = visibleFeatures.find((f) => f.id === view && !f.soon);
 
   if (active) {
