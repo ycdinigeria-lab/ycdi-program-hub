@@ -7,6 +7,7 @@ import LoginScreen from "./auth/LoginScreen.jsx";
 import SignupPending from "./auth/SignupPending.jsx";
 import PendingApprovals from "./auth/PendingApprovals.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import NotificationBell from "./components/NotificationBell.jsx";
 import { useOnline } from "./useOnline.js";
 import { humanise } from "./lib/errors.js";
 import SpiritualSection from "./sections/SpiritualSection.jsx";
@@ -31,6 +32,14 @@ export default function App() {
   function goToSection(id) {
     if (id !== "more") setMoreView(null);
     setSection(id);
+  }
+
+  // Clicking a notification lands you on the screen it came from,
+  // including one nested inside More.
+  function openFromNotification(target, view) {
+    setSection(target);
+    setMoreView(target === "more" ? view : null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function showToast(msg, type) {
@@ -162,6 +171,7 @@ export default function App() {
         );
         const userBlock = (
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <NotificationBell onOpen={openFromNotification} isMobile={isMobile} />
             <Avatar name={profile.full_name} size={30} />
             {!isMobile ? (
               <div>

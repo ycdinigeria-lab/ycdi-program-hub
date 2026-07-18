@@ -14,7 +14,7 @@ pass=0; fail=0
 run() {
   local expect="$1" uid="$2" desc="$3" sql="$4"
   local out
-  out=$(su postgres -c "psql -h /tmp/pg -d ycdi -v ON_ERROR_STOP=1 -c \"set role authenticated; set test.uid = '$uid'; $sql\"" 2>&1)
+  out=$(su postgres -c "PATH=/usr/lib/postgresql/16/bin:\$PATH; psql -h /tmp/pg -d ycdi -v ON_ERROR_STOP=1 -c \"set role authenticated; set test.uid = '$uid'; $sql\"" 2>&1)
   local rc=$?
   # Row rules hide rows rather than raising. An update or delete that
   # matched nothing is a refusal, even though psql reports success.
@@ -38,7 +38,7 @@ run() {
 
 # rows <uid> <sql> -> prints count
 rows() {
-  su postgres -c "psql -h /tmp/pg -d ycdi -tAq -c \"set role authenticated; set test.uid = '$1'; $2\"" 2>/dev/null
+  su postgres -c "PATH=/usr/lib/postgresql/16/bin:\$PATH; psql -h /tmp/pg -d ycdi -tAq -c \"set role authenticated; set test.uid = '$1'; $2\"" 2>/dev/null
 }
 
 echo "PRIVILEGE ESCALATION"
@@ -117,6 +117,22 @@ run DENY  "$TM"  "team member posts as somebody else" \
   "insert into public.messages (channel_id, sender_id, body) values ((select id from channels where kind='general'),'$RC','not me');"
 echo "  channels visible to Benin team member: $(rows "$TM" 'select count(*) from public.channels;') (General + Benin = 2)"
 echo "  channels visible to admin:             $(rows "$ADMIN" 'select count(*) from public.channels;')"
+
+echo
+echo "CHANNEL VISIBILITY"
+echo "  channels visible to non-admin NC:      $(rows "$NC" 'select count(*) from public.channels;') (want all 6)"
+run ALLOW "$NC" "National Coordinator posts in a chapter channel" \
+  "insert into public.messages (channel_id, sender_id, body) values ((select id from channels where kind='chapter' and chapter_id=(select id from chapters where name='Benin')),'$NC','visiting');"
+run DENY  "$TM" "team member reads another chapter's channel" \
+  "insert into public.messages (channel_id, sender_id, body) values ((select id from channels where kind='chapter' and chapter_id=(select id from chapters where name='Auchi')),'$TM','hello');"
+
+echo
+echo "DIRECT MESSAGE PRIVACY"
+su postgres -c "PATH=/usr/lib/postgresql/16/bin:\$PATH; psql -h /tmp/pg -d ycdi -tAq -c \"set role authenticated; set test.uid = '$RC'; select public.start_dm('$TM');\"" >/dev/null 2>&1
+su postgres -c "PATH=/usr/lib/postgresql/16/bin:\$PATH; psql -h /tmp/pg -d ycdi -tAq -c \"set role authenticated; set test.uid = '$RC'; insert into public.messages (channel_id, sender_id, body) select id, '$RC', 'private note' from public.channels where kind='dm' limit 1;\"" >/dev/null 2>&1
+echo "  DM messages readable by the two people: $(rows "$RC" "select count(*) from public.messages m join public.channels c on c.id=m.channel_id where c.kind='dm';") (want 1)"
+echo "  DM messages readable by admin:         $(rows "$ADMIN" "select count(*) from public.messages m join public.channels c on c.id=m.channel_id where c.kind='dm';") (want 0)"
+echo "  DM messages readable by NC:            $(rows "$NC" "select count(*) from public.messages m join public.channels c on c.id=m.channel_id where c.kind='dm';") (want 0)"
 
 echo
 echo "LAST ADMIN PROTECTION"

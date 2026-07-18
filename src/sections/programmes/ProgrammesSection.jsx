@@ -49,7 +49,7 @@ export default function ProgrammesSection({ profile, chapters, showToast }) {
     if (error) { showToast("Error approving program: " + error.message, "error"); return; }
     setPrograms((ps) => ps.map((p) => (p.id === id ? { ...p, status: "Approved", nc_comment: "" } : p)));
     setSelected((s) => (s?.id === id ? { ...s, status: "Approved", nc_comment: "" } : s));
-    showToast("Program approved. Coordinator has been notified.");
+    showToast("Programme approved. The coordinator has been notified.");
   }
 
   async function returnProgram(id, comment) {
