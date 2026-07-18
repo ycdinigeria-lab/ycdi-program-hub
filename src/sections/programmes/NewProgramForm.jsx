@@ -42,7 +42,7 @@ export default function NewProgramForm({ profile, chapters, onSubmit, onCancel }
           <Field label="Program title" required><input style={inp} value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="e.g. School outreach - Benin Central" /></Field>
           <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
             <Field label="Chapter">
-              {profile.role === "NC" ? (
+              {profile.is_admin ? (
                 <select style={sel} value={form.chapter} onChange={(e) => set("chapter", e.target.value)}>
                   {chapterNames.map((c) => <option key={c}>{c}</option>)}
                 </select>

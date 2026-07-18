@@ -106,7 +106,7 @@ function PrayerView({ profile, showToast }) {
   const [editingKey, setEditingKey] = useState(null);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
-  const isNC = profile && profile.role === "NC";
+  const isNC = profile && profile.is_admin;
 
   useEffect(() => {
     let ignore = false;

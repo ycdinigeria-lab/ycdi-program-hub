@@ -28,14 +28,15 @@ export default function PendingApprovals() {
     const chapterId = chapterChoice[row.id] || (chapters[0] && chapters[0].id);
     if ((role === "RC" || role === "TM") && !chapterId) return;
     setBusyId(row.id);
-    const { error: insErr } = await supabase.from("profiles").insert({
-      id: row.id,
-      full_name: row.full_name,
-      role,
-      chapter_id: role === "NC" ? null : chapterId,
+    // Runs through a database function that checks admin access itself,
+    // and does the insert-into-profiles plus remove-from-requests as one
+    // step, rather than the app doing each half separately.
+    const { error } = await supabase.rpc("approve_signup", {
+      signup_id: row.id,
+      new_role: role,
+      new_chapter_id: role === "NC" ? null : chapterId,
     });
-    if (insErr) { alert("Could not approve: " + insErr.message); setBusyId(null); return; }
-    await supabase.from("pending_signups").delete().eq("id", row.id);
+    if (error) { alert("Could not approve: " + error.message); setBusyId(null); return; }
     setRows((rs) => rs.filter((r) => r.id !== row.id));
     setBusyId(null);
   }
@@ -43,7 +44,8 @@ export default function PendingApprovals() {
   async function reject(row) {
     if (!window.confirm(`Reject the sign-up request from ${row.full_name}? This only removes the request, if they already have a sign-in account, remove that separately in Supabase if needed.`)) return;
     setBusyId(row.id);
-    await supabase.from("pending_signups").delete().eq("id", row.id);
+    const { error } = await supabase.rpc("reject_signup", { signup_id: row.id });
+    if (error) { alert("Could not reject: " + error.message); setBusyId(null); return; }
     setRows((rs) => rs.filter((r) => r.id !== row.id));
     setBusyId(null);
   }

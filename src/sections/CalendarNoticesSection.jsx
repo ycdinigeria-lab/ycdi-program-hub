@@ -37,10 +37,11 @@ function ScopeBadge({ scope, chapterName }) {
   );
 }
 
-// Scope choices depend on role. NC can post generally or to any chapter.
-// RC can only post to their own chapter. (Team Members can't post at all.)
+// Scope choices depend on admin access, not role. An admin can post
+// generally or to any chapter. An RC can only post to their own chapter.
+// (Team Members can't post at all.)
 function scopeChoicesFor(profile, chapters) {
-  if (profile.role === "NC") {
+  if (profile.is_admin) {
     return [
       { v: "general", label: "General (all chapters)" },
       ...chapters.map((c) => ({ v: "chapter:" + c.id, label: c.name + " chapter" })),
@@ -134,7 +135,7 @@ function AnnouncementsView({ profile, chapters, showToast }) {
 
   const canPost = profile.role !== "TM";
   const chapterName = (id) => (chapters.find((c) => c.id === id) || {}).name;
-  const canManage = (r) => profile.role === "NC" || (profile.role === "RC" && r.scope === "chapter" && r.chapter_id === profile.chapter_id);
+  const canManage = (r) => profile.is_admin || (profile.role === "RC" && r.scope === "chapter" && r.chapter_id === profile.chapter_id);
 
   async function load() {
     setLoading(true);
@@ -267,7 +268,7 @@ function CalendarView({ profile, chapters, showToast }) {
 
   const canPost = profile.role !== "TM";
   const chapterName = (id) => (chapters.find((c) => c.id === id) || {}).name;
-  const canManage = (r) => profile.role === "NC" || (profile.role === "RC" && r.scope === "chapter" && r.chapter_id === profile.chapter_id);
+  const canManage = (r) => profile.is_admin || (profile.role === "RC" && r.scope === "chapter" && r.chapter_id === profile.chapter_id);
 
   async function load() {
     setLoading(true);

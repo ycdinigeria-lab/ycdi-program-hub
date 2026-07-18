@@ -189,8 +189,8 @@ export default function DirectorySection({ profile, chapters, showToast }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const canEdit = (m) => profile.role === "NC" || (profile.role === "RC" && m.chapter_id === profile.chapter_id);
-  const canAdd = profile.role === "NC" || profile.role === "RC";
+  const canEdit = (m) => profile.is_admin || (profile.role === "RC" && m.chapter_id === profile.chapter_id);
+  const canAdd = profile.is_admin || profile.role === "RC";
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();

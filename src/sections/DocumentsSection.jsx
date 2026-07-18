@@ -380,7 +380,7 @@ export default function DocumentsSection({ profile, showToast }) {
   const [removing, setRemoving] = useState(null);
   const [busyId, setBusyId] = useState(null);
 
-  const isNC = profile.role === "NC";
+  const isAdmin = !!profile.is_admin;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -452,7 +452,7 @@ export default function DocumentsSection({ profile, showToast }) {
       <Card style={{ background: B.blueLight, borderColor: B.blue + "30", marginBottom: 18 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: B.blueDark, fontFamily: "'Montserrat',sans-serif", marginBottom: 4 }}>Documents & Resources</div>
         <p style={{ margin: 0, fontSize: 12, color: B.muted, lineHeight: 1.7 }}>
-          {isNC
+          {isAdmin
             ? "Everything the chapters need in one place. You can add, rename and remove categories here. Categories marked National Coordinator only are invisible to everyone else."
             : "Guides, templates and resources for your work. Tap Download on any card to open the file."}
         </p>
@@ -467,7 +467,7 @@ export default function DocumentsSection({ profile, showToast }) {
           placeholder="Search documents…"
           style={{ ...inp, flex: "1 1 200px", width: "auto", minWidth: 160 }}
         />
-        {isNC ? (
+        {isAdmin ? (
           <>
             <button onClick={() => { setEditing(null); setComposing(true); }} disabled={!cats.length} style={{ ...btnP, opacity: cats.length ? 1 : 0.5, display: "inline-flex", alignItems: "center", gap: 6 }}>
               <Icon d={ICON.plus} size={13} color={B.white} /> Add document
@@ -497,9 +497,9 @@ export default function DocumentsSection({ profile, showToast }) {
         <Card style={{ textAlign: "center", padding: "34px 20px" }}>
           <div style={{ fontSize: 13.5, fontWeight: 700, fontFamily: "'Montserrat',sans-serif", color: B.black, marginBottom: 6 }}>No categories yet</div>
           <p style={{ margin: "0 0 14px", fontSize: 12.5, color: B.muted, lineHeight: 1.6 }}>
-            {isNC ? "Create the first category, then start adding documents to it." : "Nothing has been published here yet. Check back shortly."}
+            {isAdmin ? "Create the first category, then start adding documents to it." : "Nothing has been published here yet. Check back shortly."}
           </p>
-          {isNC ? <button onClick={() => setManaging(true)} style={btnP}>Create a category</button> : null}
+          {isAdmin ? <button onClick={() => setManaging(true)} style={btnP}>Create a category</button> : null}
         </Card>
       ) : visible.length === 0 ? (
         <Card style={{ textAlign: "center", padding: "30px 20px", fontSize: 13, color: B.muted }}>
@@ -512,7 +512,7 @@ export default function DocumentsSection({ profile, showToast }) {
               key={d.id}
               doc={d}
               category={catById[d.category_id]}
-              canManage={isNC}
+              canManage={isAdmin}
               downloading={busyId === d.id}
               onDownload={() => download(d)}
               onEdit={() => { setEditing(d); setComposing(true); }}

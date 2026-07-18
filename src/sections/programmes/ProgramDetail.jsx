@@ -38,7 +38,7 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
   }
 
   const hasReport = !!report;
-  const canLogReport = (program.status === "Approved" || program.status === "Live") && (profile.role === "NC" || profile.chapter_name === program.chapter_name);
+  const canLogReport = (program.status === "Approved" || program.status === "Live") && (profile.is_admin || profile.chapter_name === program.chapter_name);
 
   return (
     <div style={{ fontFamily: "'Open Sans',sans-serif" }}>
@@ -50,7 +50,7 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
           <div style={{ fontSize: 12, color: B.muted, marginTop: 5 }}>{program.chapter_name} Chapter - {program.type} - {program.date}</div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          {profile.role === "NC" && program.status === "Pending" ? (
+          {profile.is_admin && program.status === "Pending" ? (
             <>
               <button onClick={() => onApprove(program.id)} style={btnP}>Approve</button>
               <button onClick={() => setReturning(true)} style={btnR}>Return with Comment</button>

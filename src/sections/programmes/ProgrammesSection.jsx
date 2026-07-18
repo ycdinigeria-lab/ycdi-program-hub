@@ -42,16 +42,19 @@ export default function ProgrammesSection({ profile, chapters, showToast }) {
   }
 
   async function approveProgram(id) {
-    const { error } = await supabase.from("programs").update({ status: "Approved", nc_comment: "" }).eq("id", id);
-    if (error) { showToast("Error approving program.", "error"); return; }
+    // Goes through a function on the database side rather than a direct
+    // table update, so the "only an admin can do this" check lives in
+    // one place instead of depending on the programs table's own rules.
+    const { error } = await supabase.rpc("approve_program", { program_id: id });
+    if (error) { showToast("Error approving program: " + error.message, "error"); return; }
     setPrograms((ps) => ps.map((p) => (p.id === id ? { ...p, status: "Approved", nc_comment: "" } : p)));
     setSelected((s) => (s?.id === id ? { ...s, status: "Approved", nc_comment: "" } : s));
     showToast("Program approved. Coordinator has been notified.");
   }
 
   async function returnProgram(id, comment) {
-    const { error } = await supabase.from("programs").update({ status: "Returned", nc_comment: comment }).eq("id", id);
-    if (error) { showToast("Error returning program.", "error"); return; }
+    const { error } = await supabase.rpc("return_program", { program_id: id, note: comment });
+    if (error) { showToast("Error returning program: " + error.message, "error"); return; }
     setPrograms((ps) => ps.map((p) => (p.id === id ? { ...p, status: "Returned", nc_comment: comment } : p)));
     setSelected((s) => (s?.id === id ? { ...s, status: "Returned", nc_comment: comment } : s));
     showToast("Program returned with your comment.", "warning");

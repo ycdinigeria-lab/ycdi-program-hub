@@ -159,7 +159,7 @@ export default function App() {
             {!isMobile ? (
               <div>
                 <div style={{ fontSize: 12, color: B.white, fontWeight: 700, fontFamily: "'Montserrat',sans-serif", lineHeight: 1.2 }}>{profile.full_name}</div>
-                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)" }}>{profile.role === "NC" ? "National Coordinator" : profile.role === "TM" ? profile.chapter_name + " Team Member" : profile.chapter_name + " RC"}</div>
+                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)" }}>{(profile.role === "NC" ? "National Coordinator" : profile.role === "TM" ? profile.chapter_name + " Team Member" : profile.chapter_name + " RC") + (profile.is_admin ? " · Admin" : "")}</div>
               </div>
             ) : null}
             <button onClick={signOut} style={{ background: "none", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 6, color: "rgba(255,255,255,0.75)", padding: "5px 12px", fontSize: 11, cursor: "pointer" }}>
@@ -226,7 +226,7 @@ export default function App() {
           <div style={{ fontSize: 12, color: B.muted, marginTop: 3 }}>YCDI - {new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</div>
         </div>
 
-        {profile.role === "NC" ? <PendingApprovals /> : null}
+        {profile.is_admin ? <PendingApprovals /> : null}
 
         {section === "programmes" && profile.role !== "TM" ? (
           <ProgrammesSection profile={profile} chapters={chapters} showToast={showToast} />
