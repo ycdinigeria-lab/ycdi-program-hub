@@ -41,7 +41,7 @@ export default function ReportSummary({ r }) {
 
       <div style={box}>
         <SHead color={B.blue}>A. Program overview</SHead>
-        <div className="rcol2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+        <div className="rcol2" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)", gap: 8 }}>
           <KV label="Report date" value={r.report_date || "—"} />
           <KV label="Coordinator" value={r.reporting_coordinator || "—"} />
           <KV label="Start time" value={r.actual_start_time || "—"} />
@@ -54,13 +54,13 @@ export default function ReportSummary({ r }) {
 
       <div style={box}>
         <SHead color={B.blue}>B. Attendance and reach</SHead>
-        <div className="rcol2" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 10 }}>
+        <div className="rcol2" style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
           <Stat label="Total" value={r.attendance ?? 0} tone={B.blueLight} />
           <Stat label="Male" value={r.male_count ?? 0} tone={B.blueLight} />
           <Stat label="Female" value={r.female_count ?? 0} tone={B.blueLight} />
           <Stat label="Volunteers" value={r.volunteers_deployed ?? 0} tone={B.blueLight} />
         </div>
-        <div className="rcol2" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 10 }}>
+        <div className="rcol2" style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
           <Stat label="Ages 10-14" value={r.age_10_14 ?? 0} />
           <Stat label="Ages 15-19" value={r.age_15_19 ?? 0} />
           <Stat label="Ages 20-25" value={r.age_20_25 ?? 0} />
@@ -70,13 +70,13 @@ export default function ReportSummary({ r }) {
 
       <div style={box}>
         <SHead color={B.purple}>C. Program delivery</SHead>
-        <div className="rcol2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+        <div className="rcol2" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)", gap: 8, marginBottom: 10 }}>
           <KV label="Ran as planned" value={r.program_ran_as_planned ? "Yes" : "No"} />
           <KV label="Teaching method" value={r.teaching_method || "—"} />
           <KV label="Engagement" value={(r.audience_engagement || "—").split("—")[0]} />
         </div>
         <Block label="Topics covered" text={r.topics_covered} />
-        <div className="rcol2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+        <div className="rcol2" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)", gap: 8 }}>
           <KV label="Mission test" value={r.three_test_mission || "—"} />
           <KV label="Quality test" value={r.three_test_quality || "—"} />
           <KV label="Safety test" value={r.three_test_safety || "—"} />
@@ -85,7 +85,7 @@ export default function ReportSummary({ r }) {
 
       <div style={box}>
         <SHead color={B.green}>D. Spiritual impact</SHead>
-        <div className="rcol2" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 10 }}>
+        <div className="rcol2" style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
           <Stat label="New commitments" value={r.commitments_to_christ ?? 0} tone="#E8F5E9" />
           <Stat label="Recommitments" value={r.recommitments ?? 0} tone="#E8F5E9" />
           <Stat label="Testimonials" value={r.testimonials ?? 0} tone="#E8F5E9" />
@@ -97,7 +97,7 @@ export default function ReportSummary({ r }) {
 
       <div style={box}>
         <SHead color={B.red}>E. Safeguarding and welfare</SHead>
-        <div className="rcol2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+        <div className="rcol2" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)", gap: 8, marginBottom: 10 }}>
           <KV label="Two-volunteer rule" value={r.two_volunteer_rule ? "Observed" : "NOT observed"} warn={!r.two_volunteer_rule} />
           <KV label="Parental consents" value={r.parental_consents ? "Yes" : "No"} warn={!r.parental_consents} />
           <KV label="School permission" value={r.school_permission ? "Yes" : "No"} warn={!r.school_permission} />
@@ -110,7 +110,7 @@ export default function ReportSummary({ r }) {
 
       <div style={box}>
         <SHead>F. Financial accountability</SHead>
-        <div className="rcol2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
+        <div className="rcol2" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)", gap: 8, marginBottom: 8 }}>
           <KV label="Approved budget" value={`NGN ${(r.budget_approved || 0).toLocaleString()}`} />
           <KV label="Actual expenditure" value={`NGN ${(r.actual_expenditure || 0).toLocaleString()}`} />
           <KV label="Variance" value={`NGN ${((r.actual_expenditure || 0) - (r.budget_approved || 0)).toLocaleString()}`} />

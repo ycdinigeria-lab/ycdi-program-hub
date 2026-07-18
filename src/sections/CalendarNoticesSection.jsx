@@ -234,7 +234,7 @@ function EventComposer({ profile, chapters, editing, onSaved, onCancel, showToas
     <Card style={{ marginBottom: 16, borderColor: B.blue + "60" }}>
       <SHead color={B.blue}>{editing ? "Edit event" : "New event"}</SHead>
       <Field label="Title" required><input style={inp} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Chapter prayer meeting" /></Field>
-      <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
         <Field label="Date" required><input type="date" style={inp} value={date} onChange={(e) => setDate(e.target.value)} /></Field>
         <Field label="Time (optional)"><input style={inp} value={time} onChange={(e) => setTime(e.target.value)} placeholder="e.g. 4:00 PM" /></Field>
       </div>

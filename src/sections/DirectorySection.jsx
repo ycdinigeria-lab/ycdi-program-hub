@@ -148,7 +148,7 @@ function MemberForm({ member, chapters, profile, onClose, onSave }) {
             </select>
           )}
         </Field>
-        <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
           <Field label="Email"><input style={fieldInput} value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="name@ycdinigeria.org" /></Field>
           <Field label="Phone / WhatsApp"><input style={fieldInput} value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+234…" /></Field>
         </div>
@@ -289,7 +289,7 @@ export default function DirectorySection({ profile, chapters, showToast }) {
             <div style={{ fontFamily: "'Montserrat',sans-serif", fontWeight: 700, fontSize: 12, color: B.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10, borderBottom: `2px solid ${B.yellow}`, paddingBottom: 5 }}>
               {chapterName} <span style={{ color: B.border }}>· {people.length}</span>
             </div>
-            <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+            <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))", gap: 12 }}>
               {people.map((m) => (
                 <MemberCard key={m.id} member={m} canEdit={canEdit(m)} onEdit={() => setEditing(m)} onRemove={() => setRemoving(m)} />
               ))}

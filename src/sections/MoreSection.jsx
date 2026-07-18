@@ -1,5 +1,6 @@
 import { B } from "../theme.js";
 import DocumentsSection from "./DocumentsSection.jsx";
+import CalendarNoticesSection from "./CalendarNoticesSection.jsx";
 
 // Everything that lives behind the "More" tab. New features get added here
 // instead of adding another button to the top navigation, which was already
@@ -11,9 +12,18 @@ import DocumentsSection from "./DocumentsSection.jsx";
 const ICONS = {
   docs: "M6 2h7l5 5v15H6zm7 1.5V8h4.5zM8 12h8v1.6H8zm0 3.4h8V17H8zm0-6.8h4v1.6H8z",
   chat: "M4 3h16a2 2 0 012 2v10a2 2 0 01-2 2H9l-5 4V5a2 2 0 010-2zm3 6h10v1.8H7zm0 3.4h7V14H7z",
+  calendar: "M7 2v2h10V2h2v2h1a2 2 0 012 2v14a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2h1V2zM4 9v11h16V9zm2.5 2.5h3v3h-3zm5.5 0h3v3h-3z",
 };
 
 export const MORE_FEATURES = [
+  {
+    id: "calendar",
+    title: "Calendar & Notices",
+    blurb: "Announcements and dated events, general or for one chapter.",
+    icon: ICONS.calendar,
+    accent: B.red,
+    render: (props) => <CalendarNoticesSection {...props} />,
+  },
   {
     id: "documents",
     title: "Documents & Resources",
@@ -97,7 +107,7 @@ export default function MoreSection({ profile, chapters, showToast, view, setVie
       <p style={{ margin: "0 0 18px", fontSize: 13, color: B.muted, lineHeight: 1.7 }}>
         The rest of the hub lives here. Pick one to open it.
       </p>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))", gap: 14 }}>
         {MORE_FEATURES.map((f) => (
           <FeatureCard key={f.id} f={f} onOpen={() => setView(f.id)} />
         ))}

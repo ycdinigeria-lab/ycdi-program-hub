@@ -56,15 +56,15 @@ export default function PendingApprovals() {
       {rows.map((row, i) => (
         <div key={row.id} style={{ borderBottom: i < rows.length - 1 ? `1px solid ${B.blue}30` : "none", padding: "12px 0" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
-            <div>
+            <div style={{ minWidth: 0, flex: "1 1 160px" }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: B.black, fontFamily: "'Montserrat',sans-serif" }}>{row.full_name}</div>
-              <div style={{ fontSize: 12, color: B.muted }}>{row.email}</div>
+              <div style={{ fontSize: 12, color: B.muted, overflowWrap: "anywhere" }}>{row.email}</div>
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
               <select
                 value={roleChoice[row.id] || "RC"}
                 onChange={(e) => setRoleChoice((c) => ({ ...c, [row.id]: e.target.value }))}
-                style={{ padding: "6px 10px", borderRadius: 6, border: `1px solid ${B.border}`, fontSize: 12 }}
+                style={{ padding: "6px 10px", borderRadius: 6, border: `1px solid ${B.border}`, fontSize: 12, maxWidth: "100%", minWidth: 0 }}
               >
                 <option value="RC">Regional Coordinator</option>
                 <option value="TM">Team Member</option>
@@ -74,7 +74,7 @@ export default function PendingApprovals() {
                 <select
                   value={chapterChoice[row.id] || ""}
                   onChange={(e) => setChapterChoice((c) => ({ ...c, [row.id]: e.target.value }))}
-                  style={{ padding: "6px 10px", borderRadius: 6, border: `1px solid ${B.border}`, fontSize: 12 }}
+                  style={{ padding: "6px 10px", borderRadius: 6, border: `1px solid ${B.border}`, fontSize: 12, maxWidth: "100%", minWidth: 0 }}
                 >
                   <option value="">Select chapter…</option>
                   {chapters.map((ch) => <option key={ch.id} value={ch.id}>{ch.name}</option>)}

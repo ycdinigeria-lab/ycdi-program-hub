@@ -45,7 +45,7 @@ export default function CoordDashboard({ programs, profile, onView, onNew, onRep
             style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 0", borderBottom: i < mine.length - 1 ? `1px solid ${B.offWhite}` : "none" }}
           >
             <div onClick={() => onView(p)} style={{ width: 4, height: 42, borderRadius: 2, background: (STATUS_CFG[p.status] || {}).dot || B.border, flexShrink: 0, cursor: "pointer" }} />
-            <div onClick={() => onView(p)} style={{ flex: 1, cursor: "pointer" }}>
+            <div onClick={() => onView(p)} style={{ flex: 1, minWidth: 0, cursor: "pointer" }}>
               <div style={{ fontSize: 13, fontWeight: 600 }}>{p.title}</div>
               <div style={{ fontSize: 11, color: B.muted, marginTop: 2 }}>{p.type} - {p.date} - {p.students} students</div>
             </div>

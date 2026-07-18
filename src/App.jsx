@@ -10,7 +10,6 @@ import SpiritualSection from "./sections/SpiritualSection.jsx";
 import ProgrammesSection from "./sections/programmes/ProgrammesSection.jsx";
 import PrayerManualSection from "./sections/PrayerManualSection.jsx";
 import DirectorySection from "./sections/DirectorySection.jsx";
-import CalendarNoticesSection from "./sections/CalendarNoticesSection.jsx";
 import MoreSection, { moreFeatureTitle } from "./sections/MoreSection.jsx";
 
 export default function App() {
@@ -100,7 +99,6 @@ export default function App() {
     if (section === "spiritual") return "Spiritual Ministry Framework";
     if (section === "prayer") return "Prayer Manual";
     if (section === "directory") return "People Directory";
-    if (section === "calendar") return "Calendar & Notices";
     if (section === "more") return moreView ? moreFeatureTitle(moreView) : "More";
     return profile.role === "NC" ? "National Overview" : profile.chapter_name + " Chapter";
   }
@@ -110,12 +108,35 @@ export default function App() {
       <style>{GFONTS}</style>
       <style>{`
         * { box-sizing: border-box; }
-        html, body { margin: 0; padding: 0; }
-        img { max-width: 100%; }
+        html, body { margin: 0; padding: 0; max-width: 100%; overflow-x: hidden; }
+        #root { max-width: 100%; overflow-x: hidden; }
+
+        /* Long unbroken text (email addresses, file names, program titles
+           with no spaces) used to set the minimum width of whatever card it
+           sat in, and that dragged the whole page wider than the screen.
+           Letting it break stops that at the source. */
+        body { overflow-wrap: anywhere; }
+
+        img, svg, video, canvas { max-width: 100%; height: auto; }
+        input, select, textarea, button { max-width: 100%; min-width: 0; }
+
+        /* Grid and flex children shrink by default in this app. Without this
+           they hold the width of their longest word instead. */
+        .rcol1 > *, .rcol2 > *, .rstats > * { min-width: 0; }
+
+        /* The programme list and the chapter chart. One column by default,
+           side by side only once there is genuinely room for the sidebar.
+           Built as min-width rather than max-width so the narrow layout is
+           what a phone gets without having to override anything. */
+        .ncsplit { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+        @media (min-width: 860px) {
+          .ncsplit { grid-template-columns: minmax(0, 1fr) 270px; }
+        }
+
         @media (max-width: 760px) {
-          .rcol1 { grid-template-columns: 1fr !important; }
-          .rcol2 { grid-template-columns: repeat(2, 1fr) !important; }
-          .rstats { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; }
+          .rcol1 { grid-template-columns: minmax(0, 1fr) !important; }
+          .rcol2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+          .rstats { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
         }
       `}</style>
 
@@ -125,7 +146,6 @@ export default function App() {
           { id: "spiritual", label: "Spiritual Ministry", short: "Spiritual" },
           { id: "prayer", label: "Prayer Manual", short: "Prayer" },
           { id: "directory", label: "Directory", short: "Directory" },
-          { id: "calendar", label: "Calendar & Notices", short: "Calendar" },
           { id: "more", label: "More", short: "More" },
         ].filter((t) => t.id !== "programmes" || profile.role !== "TM");
         const tabBtn = (t) => (
@@ -214,7 +234,6 @@ export default function App() {
         {section === "spiritual" ? <SpiritualSection profile={profile} showToast={showToast} /> : null}
         {section === "prayer" ? <PrayerManualSection /> : null}
         {section === "directory" ? <DirectorySection profile={profile} chapters={chapters} showToast={showToast} /> : null}
-        {section === "calendar" ? <CalendarNoticesSection profile={profile} chapters={chapters} showToast={showToast} /> : null}
         {section === "more" ? <MoreSection profile={profile} chapters={chapters} showToast={showToast} view={moreView} setView={setMoreView} /> : null}
       </div>
 

@@ -12,14 +12,28 @@ function DiscipleshipView() {
   return (
     <Card style={{ marginBottom: 14 }}>
       <SHead color={B.purple}>Five-stage discipleship pathway - 2 Timothy 2:2</SHead>
-      <div style={{ display: "flex", gap: 0, marginBottom: 20, borderRadius: 8, overflow: "hidden", border: "1px solid " + B.border }}>
+      {/* Five across only works when there is room for five. Wrapping pills
+          behave at every width instead of squeezing "Multiply" off the edge. */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 20 }}>
         {DISCIPLESHIP_STAGES.map((st, i) => (
-          <button key={st.stage} onClick={() => setActive(i)} style={{ flex: 1, padding: "10px 4px", background: active === i ? stageColors[i] : B.white, color: active === i ? B.white : B.muted, border: "none", cursor: "pointer", fontSize: 12, fontWeight: active === i ? 700 : 400, fontFamily: "'Montserrat',sans-serif", borderRight: i < 4 ? "1px solid " + B.border : "none" }}>
+          <button
+            key={st.stage}
+            onClick={() => setActive(i)}
+            style={{
+              flex: "1 1 88px", minWidth: 0, padding: "9px 10px", borderRadius: 20,
+              background: active === i ? stageColors[i] : B.white,
+              color: active === i ? B.white : B.muted,
+              border: "1.5px solid " + (active === i ? stageColors[i] : B.border),
+              cursor: "pointer", fontSize: 12, fontWeight: active === i ? 700 : 400,
+              fontFamily: "'Montserrat',sans-serif", whiteSpace: "nowrap",
+              overflow: "hidden", textOverflow: "ellipsis",
+            }}
+          >
             {st.stage}
           </button>
         ))}
       </div>
-      <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+      <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 14 }}>
         <div>
           <div style={{ fontSize: 11, color: B.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6, fontFamily: "'Montserrat',sans-serif" }}>Description</div>
           <p style={{ margin: "0 0 12px", fontSize: 13, lineHeight: 1.7 }}>{s.desc}</p>
@@ -69,7 +83,7 @@ function CharacterView() {
     <Card style={{ marginBottom: 14 }}>
       <SHead color={B.purple}>Biblical ethics and conduct - ten character standards</SHead>
       <p style={{ fontSize: 13, color: B.muted, margin: "0 0 14px", lineHeight: 1.6 }}>Every YCDI leader is called to embody these ten Christ-formed character standards. Tap any to read in full.</p>
-      <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+      <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 8 }}>
         {CHARACTER_STANDARDS.map((c, i) => (
           <div key={c.name} onClick={() => setActive(active === i ? null : i)} style={{ padding: "12px 14px", borderRadius: 8, border: "1.5px solid " + (active === i ? B.purple : B.border), cursor: "pointer", background: active === i ? B.purpleLight : B.white }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

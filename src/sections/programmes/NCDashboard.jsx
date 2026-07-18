@@ -1,7 +1,6 @@
 import { B, STATUS_CFG } from "../../theme.js";
 import { Card, SHead, StatCard, MiniBar, Badge } from "../../components/ui.jsx";
 import { CHAPTERS_FALLBACK } from "../../data/programmes.js";
-import PendingApprovals from "../../auth/PendingApprovals.jsx";
 
 export default function NCDashboard({ programs, chapters, onView }) {
   const pending = programs.filter((p) => p.status === "Pending");
@@ -25,7 +24,7 @@ export default function NCDashboard({ programs, chapters, onView }) {
           <SHead>Pending your approval</SHead>
           {pending.map((p, i) => (
             <div key={p.id} onClick={() => onView(p)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < pending.length - 1 ? `1px solid ${B.yellow}40` : "none", cursor: "pointer" }}>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>{p.title}</div>
                 <div style={{ fontSize: 11, color: B.muted }}>{p.chapter_name} - {new Date(p.created_at).toLocaleDateString()}</div>
               </div>
@@ -35,9 +34,7 @@ export default function NCDashboard({ programs, chapters, onView }) {
         </Card>
       ) : null}
 
-      <PendingApprovals />
-
-      <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "1fr 260px", gap: 14 }}>
+      <div className="ncsplit">
         <Card>
           <SHead>All programs</SHead>
           {programs.length === 0 ? (

@@ -506,7 +506,7 @@ export default function DocumentsSection({ profile, showToast }) {
           {q.trim() ? `Nothing matches "${q.trim()}".` : "No documents in here yet."}
         </Card>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(228px, 1fr))", gap: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 228px), 1fr))", gap: 14 }}>
           {visible.map((d) => (
             <DocumentCard
               key={d.id}
