@@ -74,6 +74,8 @@ function MemberCard({ member, canEdit, onEdit, onRemove }) {
         <span style={pill()}><Icon d={ICON.pin} size={13} color="#5B6470" /> {member.chapter_name || NAT}</span>
         {member.email ? <a href={`mailto:${member.email}`} style={pill(true)}><Icon d={ICON.mail} size={13} color="#5B6470" /> Email</a> : null}
         {member.phone ? <a href={`tel:${member.phone}`} style={pill(true)}><Icon d={ICON.phone} size={13} color="#5B6470" /> {member.phone}</a> : null}
+        {/* Phone comes from a separate table only admins and coordinators
+            can read. For everyone else it is simply absent. */}
       </div>
     </div>
   );
@@ -82,6 +84,7 @@ function MemberCard({ member, canEdit, onEdit, onRemove }) {
 function MemberForm({ member, chapters, profile, onClose, onSave }) {
   const isNew = !member.id;
   const isRC = profile.role === "RC";
+  const canSeePhones = profile.is_admin || isRC;
   const [form, setForm] = useState({
     id: member.id || null,
     full_name: member.full_name || "",
@@ -148,10 +151,17 @@ function MemberForm({ member, chapters, profile, onClose, onSave }) {
             </select>
           )}
         </Field>
-        <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
+        {canSeePhones ? (
+          <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
+            <Field label="Email"><input style={fieldInput} value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="name@ycdinigeria.org" /></Field>
+            <Field label="Phone / WhatsApp">
+              <input style={fieldInput} value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+234…" />
+              <div style={{ fontSize: 11, color: B.muted, marginTop: 5 }}>Visible to admins and coordinators only.</div>
+            </Field>
+          </div>
+        ) : (
           <Field label="Email"><input style={fieldInput} value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="name@ycdinigeria.org" /></Field>
-          <Field label="Phone / WhatsApp"><input style={fieldInput} value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+234…" /></Field>
-        </div>
+        )}
         <Field label="Brief profile"><textarea style={{ ...fieldInput, minHeight: 74, resize: "vertical" }} value={form.bio} onChange={(e) => set("bio", e.target.value)} placeholder="A line or two: what they do, how long they've served, anything worth knowing." /></Field>
         {err ? <div style={{ fontSize: 13, color: B.red, background: "#FDECEF", padding: "9px 12px", borderRadius: 9 }}>{err}</div> : null}
       </div>
@@ -173,7 +183,13 @@ export default function DirectorySection({ profile, chapters, showToast }) {
 
   const load = useCallback(async () => {
     const { data } = await supabase.from("directory_members").select("*, chapters(name)").order("full_name");
-    const rows = (data || []).map((d) => ({ ...d, chapter_name: d.chapters?.name || null }));
+    // Phone numbers live in their own table with their own rules. For a
+    // Team Member or a non-admin National Coordinator this comes back
+    // empty, which is the point.
+    const { data: phones } = await supabase.from("directory_contacts").select("member_id, phone");
+    const phoneBy = {};
+    (phones || []).forEach((r) => { phoneBy[r.member_id] = r.phone; });
+    const rows = (data || []).map((d) => ({ ...d, chapter_name: d.chapters?.name || null, phone: phoneBy[d.id] || "" }));
     await Promise.all(rows.map(async (d) => {
       if (!d.photo_url) return;
       const marker = "/member-photos/";
@@ -235,14 +251,31 @@ export default function DirectorySection({ profile, chapters, showToast }) {
         role_title: form.role_title.trim() || null,
         chapter_id: form.chapter_id || null,
         email: form.email.trim() || null,
-        phone: form.phone.trim() || null,
         bio: form.bio.trim() || null,
         photo_url,
       };
-      let error;
-      if (form.id) ({ error } = await supabase.from("directory_members").update(row).eq("id", form.id));
-      else ({ error } = await supabase.from("directory_members").insert({ ...row, created_by: profile.id }));
+      let error, memberId = form.id;
+      if (form.id) {
+        ({ error } = await supabase.from("directory_members").update(row).eq("id", form.id));
+      } else {
+        const { data: created, error: insErr } = await supabase
+          .from("directory_members").insert({ ...row, created_by: profile.id }).select("id").single();
+        error = insErr;
+        memberId = created?.id;
+      }
       if (error) throw error;
+
+      // Phone is stored separately, so it saves separately.
+      const phone = (form.phone || "").trim();
+      if (memberId) {
+        if (phone) {
+          const { error: pErr } = await supabase.from("directory_contacts")
+            .upsert({ member_id: memberId, phone, updated_at: new Date().toISOString() });
+          if (pErr) throw pErr;
+        } else if (form.id) {
+          await supabase.from("directory_contacts").delete().eq("member_id", form.id);
+        }
+      }
       await load();
       setEditing(null);
       showToast(form.id ? "Profile updated." : "Member added.");

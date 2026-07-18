@@ -3,6 +3,35 @@ import { supabase } from "../lib/supabase.js";
 import { B } from "../theme.js";
 import { Card, SHead } from "../components/ui.jsx";
 
+// What they told us at sign-up. Shown so the person approving has
+// something to weigh rather than a bare name and address.
+function SignupDetails({ row, chapters }) {
+  const chapterName = row.chapter_id
+    ? (chapters.find((c) => c.id === row.chapter_id) || {}).name
+    : (row.chapter_id === null && row.phone ? "National / no chapter" : null);
+
+  const lines = [
+    ["Chapter", chapterName],
+    ["Phone", row.phone],
+    ["Does", row.role_title],
+    ["Coordinator", row.coordinator_name],
+    ["Referred by", row.referred_by],
+  ].filter(([, v]) => v);
+
+  if (!lines.length) return null;
+
+  return (
+    <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${B.blue}25`, display: "grid", gap: 3 }}>
+      {lines.map(([k, v]) => (
+        <div key={k} style={{ display: "flex", gap: 6, fontSize: 11.5, lineHeight: 1.5 }}>
+          <span style={{ color: B.muted, minWidth: 78, flexShrink: 0 }}>{k}</span>
+          <span style={{ color: B.black, overflowWrap: "anywhere" }}>{v}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function PendingApprovals() {
   const [rows, setRows] = useState([]);
   const [chapters, setChapters] = useState([]);
@@ -22,6 +51,14 @@ export default function PendingApprovals() {
   }
 
   useEffect(() => { load(); }, []);
+
+  // Whatever chapter they picked at sign-up becomes the starting choice,
+  // so approving is a matter of confirming rather than guessing.
+  useEffect(() => {
+    const seed = {};
+    rows.forEach((r) => { if (r.chapter_id) seed[r.id] = r.chapter_id; });
+    setChapterChoice((c) => ({ ...seed, ...c }));
+  }, [rows]);
 
   async function approve(row) {
     const role = roleChoice[row.id] || "RC";
@@ -58,9 +95,10 @@ export default function PendingApprovals() {
       {rows.map((row, i) => (
         <div key={row.id} style={{ borderBottom: i < rows.length - 1 ? `1px solid ${B.blue}30` : "none", padding: "12px 0" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
-            <div style={{ minWidth: 0, flex: "1 1 160px" }}>
+            <div style={{ minWidth: 0, flex: "1 1 220px" }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: B.black, fontFamily: "'Montserrat',sans-serif" }}>{row.full_name}</div>
               <div style={{ fontSize: 12, color: B.muted, overflowWrap: "anywhere" }}>{row.email}</div>
+              <SignupDetails row={row} chapters={chapters} />
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
               <select
