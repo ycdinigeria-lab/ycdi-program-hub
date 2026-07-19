@@ -93,6 +93,20 @@ create table storage.objects (
 
 insert into storage.buckets (id, name, public) values ('prayer-manual', 'prayer-manual', true);
 
+-- Supabase ships this helper on the storage schema and the real policies
+-- use it to work out which folder an object sits in. It is not part of
+-- Postgres, so the harness has to provide its own before any policy that
+-- calls it will load. Behaviour copied from Supabase: split the object
+-- path on '/' and drop the file name at the end.
+-- BATCH6A-MARKER storage-mock
+create or replace function storage.foldername(name text)
+returns text[] language sql immutable as $$
+  select case
+    when name is null then array[]::text[]
+    else (string_to_array(name, '/'))[1:greatest(array_length(string_to_array(name, '/'), 1) - 1, 0)]
+  end
+$$;
+
 -- Supabase grants broadly by default; the scripts narrow it from there.
 grant usage on schema public, auth, storage to anon, authenticated, service_role;
 grant all on all tables in schema public  to anon, authenticated, service_role;

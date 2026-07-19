@@ -6,6 +6,7 @@ import { ShowMore } from "../components/ShowMore.jsx";
 import { compressImage } from "../lib/imageCompress.js";
 
 // BATCH4-MARKER directory-perf
+// BATCH6A-MARKER directory-contacts
 
 const NAT = "National Leadership";
 
@@ -89,7 +90,9 @@ function MemberCard({ member, canEdit, onEdit, onRemove }) {
 function MemberForm({ member, chapters, profile, onClose, onSave }) {
   const isNew = !member.id;
   const isRC = profile.role === "RC";
-  const canSeePhones = profile.is_admin || isRC;
+  // Coordinators, the National Coordinator and admins fill these in.
+  // Nobody else gets an edit button on this screen anyway.
+  const canSeePhones = profile.is_admin || isRC || profile.role === "NC";
   const [form, setForm] = useState({
     id: member.id || null,
     full_name: member.full_name || "",
@@ -161,7 +164,7 @@ function MemberForm({ member, chapters, profile, onClose, onSave }) {
             <Field label="Email"><input style={fieldInput} value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="name@ycdinigeria.org" /></Field>
             <Field label="Phone / WhatsApp">
               <input style={fieldInput} value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+234…" />
-              <div style={{ fontSize: 11, color: B.muted, marginTop: 5 }}>Visible to admins and coordinators only.</div>
+              <div style={{ fontSize: 11, color: B.muted, marginTop: 5 }}>Seen by this person\u2019s own chapter, plus the NC and admins.</div>
             </Field>
           </div>
         ) : (
@@ -188,13 +191,21 @@ export default function DirectorySection({ profile, chapters, showToast }) {
 
   const load = useCallback(async () => {
     const { data } = await supabase.from("directory_members").select("*, chapters(name)").order("full_name");
-    // Phone numbers live in their own table with their own rules. For a
-    // Team Member or a non-admin National Coordinator this comes back
-    // empty, which is the point.
-    const { data: phones } = await supabase.from("directory_contacts").select("member_id, phone");
-    const phoneBy = {};
-    (phones || []).forEach((r) => { phoneBy[r.member_id] = r.phone; });
-    const rows = (data || []).map((d) => ({ ...d, chapter_name: d.chapters?.name || null, phone: phoneBy[d.id] || "" }));
+    // Phone numbers and email addresses live in their own table with
+    // their own rules, and this function applies them: your own chapter,
+    // plus everything if you are the National Coordinator or an admin.
+    // Somebody outside that gets fewer rows back. A person who has hidden
+    // their phone comes back with the number missing rather than the row
+    // missing, so their email still reaches them.
+    const { data: contacts } = await supabase.rpc("directory_contacts_visible");
+    const byMember = {};
+    (contacts || []).forEach((r) => { byMember[r.member_id] = r; });
+    const rows = (data || []).map((d) => ({
+      ...d,
+      chapter_name: d.chapters?.name || null,
+      phone: byMember[d.id]?.phone || "",
+      email: byMember[d.id]?.email || "",
+    }));
 
     // Photos live in a private bucket and need a signed link. This used to
     // be one network request per person, so a directory of sixty people
@@ -227,6 +238,10 @@ export default function DirectorySection({ profile, chapters, showToast }) {
 
   const canEdit = (m) => profile.is_admin || (profile.role === "RC" && m.chapter_id === profile.chapter_id);
   const canAdd = profile.is_admin || profile.role === "RC";
+  // Whether the contact boxes appear on the edit form. Writing is still
+  // decided by the database; this only avoids showing a field that would
+  // quietly fail to save.
+  const canSeeContacts = profile.is_admin || profile.role === "NC" || profile.role === "RC";
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -281,7 +296,6 @@ export default function DirectorySection({ profile, chapters, showToast }) {
         full_name: form.full_name.trim(),
         role_title: form.role_title.trim() || null,
         chapter_id: form.chapter_id || null,
-        email: form.email.trim() || null,
         bio: form.bio.trim() || null,
         photo_url,
       };
@@ -296,16 +310,21 @@ export default function DirectorySection({ profile, chapters, showToast }) {
       }
       if (error) throw error;
 
-      // Phone is stored separately, so it saves separately.
+      // Contact details are stored separately, so they save separately.
+      // Both go into one row, and clearing a field blanks that field
+      // rather than deleting the row, which would take the other one with
+      // it.
       const phone = (form.phone || "").trim();
-      if (memberId) {
-        if (phone) {
-          const { error: pErr } = await supabase.from("directory_contacts")
-            .upsert({ member_id: memberId, phone, updated_at: new Date().toISOString() });
-          if (pErr) throw pErr;
-        } else if (form.id) {
-          await supabase.from("directory_contacts").delete().eq("member_id", form.id);
-        }
+      const email = (form.email || "").trim();
+      if (memberId && canSeeContacts) {
+        const { error: cErr } = await supabase.from("directory_contacts")
+          .upsert({
+            member_id: memberId,
+            phone: phone || null,
+            email: email || null,
+            updated_at: new Date().toISOString(),
+          });
+        if (cErr) throw cErr;
       }
       await load();
       setEditing(null);

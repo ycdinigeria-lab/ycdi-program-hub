@@ -15,6 +15,8 @@ const SafeguardingSection = lazy(() => import("./SafeguardingSection.jsx"));
 const SetPasswordScreen = lazy(() => import("../auth/SetPasswordScreen.jsx"));
 // BATCH5-MARKER more-kpi
 const KpiReportSection = lazy(() => import("./KpiReportSection.jsx"));
+// BATCH6A-MARKER more-profile
+const MyProfileSection = lazy(() => import("./MyProfileSection.jsx"));
 
 // Everything that lives behind the "More" tab. New features get added here
 // instead of adding another button to the top navigation, which was already
@@ -32,6 +34,7 @@ const ICONS = {
   admin: "M12 2l8 4v6c0 5-3.4 8.7-8 10-4.6-1.3-8-5-8-10V6zm0 2.2L6 6.9v5.1c0 3.8 2.4 6.6 6 7.7 3.6-1.1 6-3.9 6-7.7V6.9zM11 15.5l-3-3 1.4-1.4L11 12.6l3.6-3.6L16 10.4z",
   key: "M12.65 10A6 6 0 105 16a6 6 0 007.65-4H17v4h2v-4h2v-2zM7 14a2 2 0 110-4 2 2 0 010 4z",
   chart: "M3 3h2v16h16v2H3zm5 9h2.5v6H8zm4.5-5H15v11h-2.5zm4.5 3h2.5v8H17z",
+  badge: "M12 2l2.4 1.8 3-.3 1 2.8 2.6 1.5-1 2.9 1 2.9-2.6 1.5-1 2.8-3-.3L12 22l-2.4-1.8-3 .3-1-2.8L3 16.2l1-2.9-1-2.9 2.6-1.5 1-2.8 3 .3zm0 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM7.6 17.4a5.6 5.6 0 018.8 0 6.7 6.7 0 01-8.8 0z",
 };
 
 export const MORE_FEATURES = [
@@ -105,6 +108,14 @@ export const MORE_FEATURES = [
     // beneficiary figures each person is shown.
     roles: ["NC", "RC"],
     render: (props) => <KpiReportSection {...props} />,
+  },
+  {
+    id: "profile",
+    title: "My Profile",
+    blurb: "Your own name, photo, phone number and volunteer record. Everyone can edit their own.",
+    icon: ICONS.badge,
+    accent: B.green,
+    render: (props) => <MyProfileSection profile={props.profile} showToast={props.showToast} />,
   },
   {
     id: "password",
