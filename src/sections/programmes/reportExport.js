@@ -84,6 +84,10 @@ export function downloadReportText(program, r) {
     "",
     "G. LESSONS LEARNED AND FOLLOW-UP",
     "-".repeat(40),
+    r.feedback_forms_returned
+      ? `Participant satisfaction: ${Math.round(((r.feedback_positive || 0) / r.feedback_forms_returned) * 1000) / 10}% (${r.feedback_positive || 0} of ${r.feedback_forms_returned} forms positive)`
+      : "Participant satisfaction: no feedback forms distributed",
+    "",
     "What went well:",
     r.what_went_well || "—",
     "",

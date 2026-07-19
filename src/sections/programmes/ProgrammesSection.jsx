@@ -11,6 +11,9 @@ export default function ProgrammesSection({ profile, chapters, showToast }) {
   const [programs, setPrograms] = useState([]);
   const [selected, setSelected] = useState(null);
   const [newMode, setNewMode] = useState(false);
+  // The programme being edited after it was returned. Null the rest of
+  // the time. BATCH4B-MARKER resubmit
+  const [editProgram, setEditProgram] = useState(null);
   const [reportProgram, setReportProgram] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -73,6 +76,28 @@ export default function ProgrammesSection({ profile, chapters, showToast }) {
     showToast("Concept note submitted to the National Coordinator.");
   }
 
+  // Sends a returned programme back up for another look.
+  //
+  // Two things are deliberately left out of this update. `nc_comment` is
+  // never sent, because the database refuses to let a coordinator change a
+  // review comment and would reject the whole save. Leaving it also keeps
+  // the comment on the record as history. `submitted_by` is left as it was
+  // so the notification still reaches whoever raised it originally.
+  async function resubmitProgram(form) {
+    const id = editProgram.id;
+    const { error } = await supabase.from("programs").update({
+      title: form.title, chapter_id: form.chapter_id, type: form.type, date: form.date,
+      students: form.students, school: form.school, objectives: form.objectives,
+      budget: form.budget, safeguarding_lead: form.safeguarding_lead, facilitators: form.facilitators,
+      status: "Pending",
+    }).eq("id", id);
+    if (error) { showToast("Could not resubmit that: " + error.message, "error"); return; }
+    await loadPrograms();
+    setEditProgram(null);
+    setSelected(null);
+    showToast("Resubmitted. The National Coordinator has been notified.");
+  }
+
   function onReportSaved() {
     loadPrograms();
     if (selected && reportProgram && selected.id === reportProgram.id) {
@@ -86,13 +111,13 @@ export default function ProgrammesSection({ profile, chapters, showToast }) {
 
   return (
     <>
-      {!selected && !newMode && profile.role === "NC" ? (
+      {!selected && !newMode && !editProgram && profile.role === "NC" ? (
         <NCDashboard programs={programs} chapters={chapters} onView={openProgram} />
       ) : null}
-      {!selected && !newMode && profile.role !== "NC" ? (
+      {!selected && !newMode && !editProgram && profile.role !== "NC" ? (
         <CoordDashboard programs={programs} profile={profile} onView={openProgram} onNew={() => setNewMode(true)} onReport={setReportProgram} />
       ) : null}
-      {selected ? (
+      {selected && !editProgram ? (
         <ProgramDetail
           program={selected}
           profile={profile}
@@ -100,10 +125,20 @@ export default function ProgrammesSection({ profile, chapters, showToast }) {
           onApprove={approveProgram}
           onReturn={returnProgram}
           onLogReport={setReportProgram}
+          onEdit={() => setEditProgram(selected)}
         />
       ) : null}
       {newMode ? (
         <NewProgramForm profile={profile} chapters={chapters} onSubmit={addProgram} onCancel={() => setNewMode(false)} />
+      ) : null}
+      {editProgram ? (
+        <NewProgramForm
+          profile={profile}
+          chapters={chapters}
+          existing={editProgram}
+          onSubmit={resubmitProgram}
+          onCancel={() => setEditProgram(null)}
+        />
       ) : null}
 
       {reportProgram ? (

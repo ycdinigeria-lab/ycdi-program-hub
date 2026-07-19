@@ -2,7 +2,7 @@ import { useState } from "react";
 import { supabase } from "../../lib/supabase.js";
 import { B, inp, sel, ta, btnP, btnG } from "../../theme.js";
 import { Field } from "../../components/ui.jsx";
-import { emptyReportForm, reportFormToRow, stepIsValid, REPORT_STEPS, ENGAGEMENT_OPTIONS, TEACHING_METHOD_OPTIONS } from "../../data/reportFields.js";
+import { emptyReportForm, reportFormToRow, stepIsValid, feedbackProblem, satisfactionPct, REPORT_STEPS, ENGAGEMENT_OPTIONS, TEACHING_METHOD_OPTIONS } from "../../data/reportFields.js";
 
 function YesNo({ value, onChange }) {
   return (
@@ -166,6 +166,37 @@ export default function ReportForm({ program, profile, onClose, onSaved, showToa
 
           {step === 6 ? (
             <>
+              {/* Participant satisfaction, the KPI in YCDI-PROG-002 that
+                  the hub could never fill in. It asks for the counts off
+                  the paper feedback forms rather than asking a
+                  coordinator to score their own event, because a
+                  self-awarded mark is not evidence.
+                  BATCH4B-MARKER satisfaction */}
+              <div style={{ background: B.offWhite, borderRadius: 8, padding: "13px 15px", marginBottom: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, fontFamily: "'Montserrat',sans-serif", color: B.black, marginBottom: 3 }}>
+                  Participant feedback
+                </div>
+                <div style={{ fontSize: 11.5, color: B.muted, lineHeight: 1.55, marginBottom: 12 }}>
+                  From the feedback forms collected at the event. Leave both blank if none were handed out. A blank is not counted against the chapter.
+                </div>
+                <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
+                  <Field label="Forms returned">
+                    <input type="number" min="0" style={inp} value={u.feedback_forms_returned} onChange={(e) => set("feedback_forms_returned", e.target.value)} />
+                  </Field>
+                  <Field label="Rated it positively">
+                    <input type="number" min="0" style={inp} value={u.feedback_positive} onChange={(e) => set("feedback_positive", e.target.value)} disabled={u.feedback_forms_returned === ""} />
+                  </Field>
+                  <Field label="Satisfaction">
+                    <input style={{ ...inp, background: B.white, color: satisfactionPct(u) === null ? B.muted : B.green, fontWeight: 700 }} value={satisfactionPct(u) === null ? "Not measured" : satisfactionPct(u) + "%"} readOnly />
+                  </Field>
+                </div>
+                {feedbackProblem(u) ? (
+                  <div style={{ background: B.redLight, border: `1px solid ${B.red}`, borderRadius: 6, padding: "8px 11px", fontSize: 12, color: "#8b0a1c", marginTop: 2 }}>
+                    {feedbackProblem(u)}
+                  </div>
+                ) : null}
+              </div>
+
               <Field label="What went well" required><textarea style={ta} value={u.what_went_well} onChange={(e) => set("what_went_well", e.target.value)} /></Field>
               <Field label="What could be improved" required><textarea style={ta} value={u.what_could_improve} onChange={(e) => set("what_could_improve", e.target.value)} /></Field>
               <Field label="Recommendations"><textarea style={ta} value={u.recommendations} onChange={(e) => set("recommendations", e.target.value)} /></Field>

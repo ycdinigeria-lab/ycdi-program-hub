@@ -6,7 +6,7 @@ import { THREE_TESTS } from "../../data/programmes.js";
 import ReportSummary from "./ReportSummary.jsx";
 import { downloadReportText } from "./reportExport.js";
 
-export default function ProgramDetail({ program, profile, onBack, onApprove, onReturn, onLogReport }) {
+export default function ProgramDetail({ program, profile, onBack, onApprove, onReturn, onLogReport, onEdit }) {
   const [returning, setReturning] = useState(false);
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
@@ -40,6 +40,15 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
   const hasReport = !!report;
   const canLogReport = (program.status === "Approved" || program.status === "Live") && (profile.is_admin || profile.chapter_name === program.chapter_name);
 
+  // A returned programme told the coordinator to revise and resubmit and
+  // then gave them no way to do either. Editing is limited to Returned on
+  // purpose: a Pending one may be open in front of the National
+  // Coordinator at that very moment, and changing it underneath them
+  // would be worse than the problem this fixes.
+  // BATCH4B-MARKER resubmit
+  const canEdit = program.status === "Returned"
+    && (profile.is_admin || (profile.role === "RC" && profile.chapter_name === program.chapter_name));
+
   return (
     <div style={{ fontFamily: "'Open Sans',sans-serif" }}>
       <button onClick={onBack} style={{ ...btnG, marginBottom: 18 }}>Back to Programs</button>
@@ -55,6 +64,9 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
               <button onClick={() => onApprove(program.id)} style={btnP}>Approve</button>
               <button onClick={() => setReturning(true)} style={btnR}>Return with Comment</button>
             </>
+          ) : null}
+          {canEdit && onEdit ? (
+            <button onClick={onEdit} style={btnP}>Edit and resubmit</button>
           ) : null}
           {loadingReport ? <span style={{ fontSize: 12, color: B.muted }}>Checking report...</span> : null}
           {!loadingReport && !hasReport && canLogReport ? (
@@ -76,7 +88,15 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
         <Card style={{ background: B.redLight, borderColor: `${B.red}50`, marginBottom: 16 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: B.red, fontFamily: "'Montserrat',sans-serif", marginBottom: 8, textTransform: "uppercase" }}>Returned by National Coordinator</div>
           <p style={{ margin: 0, fontSize: 13, color: "#5a0a13", lineHeight: 1.6, fontStyle: "italic" }}>"{program.nc_comment}"</p>
-          <div style={{ marginTop: 8, fontSize: 12, color: B.red }}>Please revise and resubmit.</div>
+          <div style={{ marginTop: 10 }}>
+            {canEdit && onEdit ? (
+              <button onClick={onEdit} style={btnR}>Revise and resubmit</button>
+            ) : (
+              <span style={{ fontSize: 12, color: B.red }}>
+                Your Regional Coordinator or an administrator can revise and resubmit this.
+              </span>
+            )}
+          </div>
         </Card>
       ) : null}
 

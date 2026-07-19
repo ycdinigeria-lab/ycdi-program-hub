@@ -3,11 +3,29 @@ import { B, inp, sel, ta, btnP, btnG } from "../../theme.js";
 import { Card, Field } from "../../components/ui.jsx";
 import { PROG_TYPES, CHAPTERS_FALLBACK } from "../../data/programmes.js";
 
-export default function NewProgramForm({ profile, chapters, onSubmit, onCancel }) {
+// Also handles editing a returned programme. Pass `existing` and the form
+// arrives pre-filled and resubmits instead of creating a new one. The
+// National Coordinator's comment is shown at the top so the coordinator can
+// read what was asked of them while they fix it.
+//
+// BATCH4B-MARKER resubmit
+export default function NewProgramForm({ profile, chapters, onSubmit, onCancel, existing }) {
+  const editing = !!existing;
   const [step, setStep] = useState(1);
   const [busy, setBusy] = useState(false);
   const chapterNames = chapters.length ? chapters.map((c) => c.name) : CHAPTERS_FALLBACK;
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(editing ? {
+    title: existing.title || "",
+    chapter: existing.chapter_name || profile.chapter_name || chapterNames[0],
+    type: existing.type || "School Visit",
+    date: existing.date || "",
+    students: existing.students == null ? "" : String(existing.students),
+    school: existing.school || "",
+    objectives: existing.objectives || "",
+    budget: existing.budget == null ? "" : String(existing.budget),
+    safeguarding_lead: existing.safeguarding_lead || "",
+    facilitators: existing.facilitators || "",
+  } : {
     title: "", chapter: profile.chapter_name || chapterNames[0], type: "School Visit",
     date: "", students: "", school: "", objectives: "", budget: "",
     safeguarding_lead: profile.full_name, facilitators: profile.full_name,
@@ -25,6 +43,14 @@ export default function NewProgramForm({ profile, chapters, onSubmit, onCancel }
 
   return (
     <Card>
+      {editing && existing.nc_comment ? (
+        <div style={{ background: B.redLight, border: `1px solid ${B.red}50`, borderRadius: 8, padding: "12px 15px", marginBottom: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: B.red, fontFamily: "'Montserrat',sans-serif", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            What the National Coordinator asked for
+          </div>
+          <p style={{ margin: 0, fontSize: 13, color: "#5a0a13", lineHeight: 1.6, fontStyle: "italic" }}>"{existing.nc_comment}"</p>
+        </div>
+      ) : null}
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 24, flexWrap: "wrap" }}>
         {[1, 2, 3].map((m) => (
           <div key={m} style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -92,7 +118,9 @@ export default function NewProgramForm({ profile, chapters, onSubmit, onCancel }
           </div>
           {!valid ? <div style={{ background: B.yellowLight, borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#7a5c00", marginBottom: 12 }}>Please complete all required fields before submitting.</div> : null}
           <div style={{ background: B.blueLight, borderRadius: 8, padding: "12px 14px", fontSize: 12, color: "#065f87", lineHeight: 1.6 }}>
-            Submitting sends this to the National Coordinator for review within 7 working days.
+            {editing
+              ? "Resubmitting sends this back to the National Coordinator for another look. Their earlier comment stays on the record."
+              : "Submitting sends this to the National Coordinator for review within 7 working days."}
           </div>
         </>
       ) : null}
@@ -100,7 +128,7 @@ export default function NewProgramForm({ profile, chapters, onSubmit, onCancel }
       <div style={{ display: "flex", gap: 10, justifyContent: "space-between", marginTop: 24 }}>
         <button style={btnG} onClick={step === 1 ? onCancel : () => setStep((s) => s - 1)}>{step === 1 ? "Cancel" : "Back"}</button>
         <button style={{ ...btnP, opacity: step === 3 && !valid ? 0.4 : 1 }} onClick={() => (step < 3 ? setStep((s) => s + 1) : submit())}>
-          {busy ? "Submitting..." : step === 3 ? "Submit for NC Approval" : "Next"}
+          {busy ? (editing ? "Resubmitting..." : "Submitting...") : step === 3 ? (editing ? "Resubmit for NC Approval" : "Submit for NC Approval") : "Next"}
         </button>
       </div>
     </Card>

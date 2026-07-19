@@ -120,6 +120,13 @@ export default function ReportSummary({ r }) {
 
       <div style={{ ...box, borderRadius: "0 0 10px 10px" }}>
         <SHead color={B.purple}>G. Lessons learned and follow-up</SHead>
+        {r.feedback_forms_returned ? (
+          <div className="rcol2" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)", gap: 8, marginBottom: 10 }}>
+            <KV label="Feedback forms returned" value={r.feedback_forms_returned} />
+            <KV label="Rated it positively" value={r.feedback_positive || 0} />
+            <KV label="Satisfaction" value={Math.round(((r.feedback_positive || 0) / r.feedback_forms_returned) * 1000) / 10 + "%"} />
+          </div>
+        ) : null}
         <Block label="What went well" text={r.what_went_well} />
         <Block label="What could be improved" text={r.what_could_improve} />
         <Block label="Recommendations" text={r.recommendations} />

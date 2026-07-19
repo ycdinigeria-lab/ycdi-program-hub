@@ -41,6 +41,7 @@ export function emptyReportForm(budgetApproved) {
     school_permission_obtained: "", welfare_concerns: "", referrals_made: "",
     budget_approved: budgetApproved || "", actual_expenditure: "",
     variance_explanation: "", receipts_obtained: "", outstanding_payments: "",
+    feedback_forms_returned: "", feedback_positive: "",
     what_went_well: "", what_could_improve: "", recommendations: "",
     follow_up_actions: "", follow_up_responsible: "", follow_up_deadline: "",
     next_program_suggested: "", coordinator_signature_confirmed: "",
@@ -93,6 +94,12 @@ export function reportFormToRow(programId, u) {
     school_permission: u.school_permission_obtained === "yes",
     welfare_concerns: u.welfare_concerns,
     referrals_made: u.referrals_made,
+    // Blank means no feedback forms were handed out, which is not the
+    // same as forms coming back with nothing positive in them. Blank is
+    // stored as null so the KPI leaves the programme out rather than
+    // counting it as a zero.
+    feedback_forms_returned: u.feedback_forms_returned === "" ? null : parseInt(u.feedback_forms_returned) || 0,
+    feedback_positive: u.feedback_forms_returned === "" ? null : parseInt(u.feedback_positive) || 0,
     budget_approved: parseFloat(u.budget_approved) || 0,
     actual_expenditure: parseFloat(u.actual_expenditure) || 0,
     variance_explanation: u.variance_explanation,
@@ -109,13 +116,32 @@ export function reportFormToRow(programId, u) {
   };
 }
 
+// More positive replies than forms returned would push a chapter above
+// 100% satisfaction in front of a funder. The database refuses it too;
+// this just says so before the coordinator gets to the end of the form.
+export function feedbackProblem(u) {
+  if (u.feedback_forms_returned === "") return "";
+  const returned = parseInt(u.feedback_forms_returned);
+  const positive = parseInt(u.feedback_positive) || 0;
+  if (isNaN(returned) || returned < 0) return "Enter how many feedback forms came back, or leave it blank if none were handed out.";
+  if (positive > returned) return "There cannot be more positive replies than forms returned.";
+  return "";
+}
+
+export function satisfactionPct(u) {
+  const returned = parseInt(u.feedback_forms_returned);
+  if (!returned) return null;
+  const positive = parseInt(u.feedback_positive) || 0;
+  return Math.round((positive / returned) * 1000) / 10;
+}
+
 export function stepIsValid(step, u) {
   if (step === 0) return !!(u.report_date && u.reporting_coordinator && u.prayer_meeting_held);
   if (step === 1) return !!(u.total_attendance && u.male_count && u.female_count);
   if (step === 2) return !!(u.program_ran_as_planned && u.topics_covered && u.three_test_mission && u.three_test_quality && u.three_test_safety);
   if (step === 4) return !!(u.incidents_occurred && u.two_volunteer_rule_observed);
   if (step === 5) return !!(u.actual_expenditure && u.receipts_obtained);
-  if (step === 6) return !!(u.what_went_well && u.what_could_improve && u.coordinator_signature_confirmed);
+  if (step === 6) return !!(u.what_went_well && u.what_could_improve && u.coordinator_signature_confirmed) && !feedbackProblem(u);
   return true;
 }
 
