@@ -360,7 +360,7 @@ function TargetsEditor({ year, targets, canEdit, onSaved, showToast }) {
 // ---------------------------------------------------------------
 // The screen
 // ---------------------------------------------------------------
-export default function KpiReportSection({ profile, showToast }) {
+export default function KpiReportSection({ profile, chapters: allChapters, showToast }) {
   const isMobile = useIsMobile();
   const today = new Date().toISOString().slice(0, 10);
   const [year, setYear] = useState(Number(today.slice(0, 4)));
@@ -412,9 +412,15 @@ export default function KpiReportSection({ profile, showToast }) {
     [snapQ, snapY, targets, quarter]
   );
 
-  const scope = profile?.role === "NC" || profile?.is_admin
+  // Say plainly whose figures these are. "Limited to what you are
+  // permitted to see" tells a coordinator nothing, and a chapter figure
+  // mistaken for a national one is exactly the sort of thing that ends up
+  // in a funder report.
+  const seesAll = profile?.role === "NC" || !!profile?.is_admin;
+  const ownChapter = (allChapters || []).find((c) => c.id === profile?.chapter_id);
+  const scope = seesAll
     ? "All chapters"
-    : "Limited to what your account is permitted to see";
+    : ownChapter ? `${ownChapter.name} chapter only` : "Your chapter only";
 
   function exportBoard() {
     const meta = {
@@ -452,6 +458,17 @@ export default function KpiReportSection({ profile, showToast }) {
           from what the hub actually holds. Three of the ten KPIs are marked not captured
           rather than estimated. Nothing on this page is a guess.
         </p>
+        {seesAll ? null : (
+          <p style={{
+            fontSize: 12.5, lineHeight: 1.6, margin: "0 0 4px",
+            background: B.blueLight, color: "#065f87", padding: "10px 13px",
+            borderRadius: 8,
+          }}>
+            These are {ownChapter ? ownChapter.name : "your chapter"}&apos;s figures, not
+            national ones. The only exception is the active chapter count, which is an
+            organisation-wide number.
+          </p>
+        )}
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end", marginTop: 14 }}>
           <div>

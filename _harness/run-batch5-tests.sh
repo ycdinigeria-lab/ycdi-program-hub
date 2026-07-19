@@ -222,15 +222,15 @@ want "every line carries a note explaining itself" "0" \
 
 echo
 echo "-- Row security: what is shared and what is not --------"
-# Programme and report rows have been readable by every signed-in person
-# since an earlier batch (policy qual is literally `true`). So the
-# programme-derived KPIs read the same for everyone, by existing design.
-# Participant rows are NOT: they are restricted by chapter. That is the
-# line that carries children's data, and it is the one that has to hold.
+# Batch 5b scoped this. Programme and report rows are still readable by
+# every signed-in person at the table level, but the KPI functions now
+# filter to the caller's own chapter unless they are the NC or an admin.
+# Batch 5b has its own suite covering that in full; these two are here so
+# that reverting the scoping breaks this file as well as that one.
 want "NC sees all three Q1 schools" "3" "$(v $Q1F $Q1T schools_reached)"
-want "RC sees the same schools, because programmes are national" "3" \
+want "RC sees only Benin's schools, not the national three" "2" \
      "$(as "$RC" "select value::text from kpi_snapshot('$Q1F','$Q1T') where kpi_key='schools_reached';")"
-want "RC sees the same activity count, same reason" "4" \
+want "RC's activity count excludes Auchi's programme" "3" \
      "$(as "$RC" "select value::text from kpi_snapshot('$Q1F','$Q1T') where kpi_key='activities_conducted';")"
 
 # The one that matters.
@@ -239,8 +239,11 @@ want "Benin RC counts only Benin's children, not Auchi's" "2" \
      "$(as "$RC" "select value::text from kpi_snapshot('$Q1F','$Q1T') where kpi_key='student_beneficiaries';")"
 want "team member is shown no beneficiaries at all" "0" \
      "$(as "$TM" "select value::text from kpi_snapshot('$Q1F','$Q1T') where kpi_key='student_beneficiaries';")"
-want "Benin RC sees no beneficiaries on Auchi's breakdown row" "0" \
-     "$(as "$RC" "select beneficiaries::text from kpi_chapter_breakdown('$Q1F','$Q1T') where chapter_name='Auchi';")"
+# Auchi's row is no longer returned to the Benin coordinator at all, so
+# there is nothing to read a zero out of. Absent beats present-and-empty:
+# a row of zeros still tells you Auchi ran nothing that quarter.
+want "Auchi's row is absent entirely for the Benin RC" "0" \
+     "$(as "$RC" "select count(*) from kpi_chapter_breakdown('$Q1F','$Q1T') where chapter_name='Auchi';")"
 want "NC does see Auchi's beneficiary on the breakdown" "1" \
      "$(as "$NC" "select beneficiaries::text from kpi_chapter_breakdown('$Q1F','$Q1T') where chapter_name='Auchi';")"
 
