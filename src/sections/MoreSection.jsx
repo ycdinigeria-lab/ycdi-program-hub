@@ -12,6 +12,7 @@ const AdminSection = lazy(() => import("./AdminSection.jsx"));
 const MessagingSection = lazy(() => import("./MessagingSection.jsx"));
 const ParticipantsSection = lazy(() => import("./ParticipantsSection.jsx"));
 const SafeguardingSection = lazy(() => import("./SafeguardingSection.jsx"));
+const SetPasswordScreen = lazy(() => import("../auth/SetPasswordScreen.jsx"));
 
 // Everything that lives behind the "More" tab. New features get added here
 // instead of adding another button to the top navigation, which was already
@@ -27,6 +28,7 @@ const ICONS = {
   people: "M12 12a4 4 0 100-8 4 4 0 000 8zm-8 9a8 8 0 0116 0v1H4zm14.5-9a3 3 0 100-6 3 3 0 000 6zM19 13c2.5 0 4 1.8 4 4v1h-3.2v-1c0-1.6-.6-3-1.6-4z",
   shield: "M12 2l8 4v6c0 5-3.4 8.7-8 10-4.6-1.3-8-5-8-10V6zm0 2.2L6 6.9v5.1c0 3.8 2.4 6.6 6 7.7 3.6-1.1 6-3.9 6-7.7V6.9zM11 7h2v6h-2zm0 8h2v2h-2z",
   admin: "M12 2l8 4v6c0 5-3.4 8.7-8 10-4.6-1.3-8-5-8-10V6zm0 2.2L6 6.9v5.1c0 3.8 2.4 6.6 6 7.7 3.6-1.1 6-3.9 6-7.7V6.9zM11 15.5l-3-3 1.4-1.4L11 12.6l3.6-3.6L16 10.4z",
+  key: "M12.65 10A6 6 0 105 16a6 6 0 007.65-4H17v4h2v-4h2v-2zM7 14a2 2 0 110-4 2 2 0 010 4z",
 };
 
 export const MORE_FEATURES = [
@@ -88,6 +90,14 @@ export const MORE_FEATURES = [
     accent: B.black,
     adminOnly: true,
     render: (props) => <AdminSection {...props} />,
+  },
+  {
+    id: "password",
+    title: "Change Password",
+    blurb: "Choose a new password for your own account. Everyone can do this.",
+    icon: ICONS.key,
+    accent: B.blue,
+    render: (props) => <SetPasswordScreen showToast={props.showToast} />,
   },
 ];
 

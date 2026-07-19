@@ -1,3 +1,7 @@
+// Imported first, and for its side effect only. It reads the reset token
+// out of the address bar at import time, which has to happen before the
+// client below is created and before React mounts.
+import './authCallback.js'
 import { createClient } from '@supabase/supabase-js'
 
 // Same live Supabase project the current hub and the People Directory use.

@@ -12,6 +12,8 @@ import { useOnline } from "./useOnline.js";
 import { humanise } from "./lib/errors.js";
 import MoreSection, { moreFeatureTitle } from "./sections/MoreSection.jsx";
 import { onUpdateReady, applyUpdate } from "./lib/pwa.js";
+import { arrivedForPasswordRecovery, hasAuthCallback, authLinkError, clearAuthCallbackFromUrl } from "./lib/authCallback.js";
+import SetPasswordScreen from "./auth/SetPasswordScreen.jsx";
 
 // Each tab is fetched the first time it is opened rather than sitting in
 // the file that has to download before the login screen can appear. Most
@@ -40,6 +42,11 @@ export default function App() {
   const [moreView, setMoreView] = useState(null);
   const [toast, setToast] = useState(null);
   const [updateReady, setUpdateReady] = useState(false);
+  // True when somebody has arrived on a password reset link. Nothing else
+  // in the app is reachable until they choose a password or sign out.
+  // BATCH4C-MARKER recovery
+  const [recovery, setRecovery] = useState(arrivedForPasswordRecovery);
+  const [linkError] = useState(authLinkError());
   const isMobile = useIsMobile();
   const online = useOnline();
 
@@ -73,7 +80,12 @@ export default function App() {
   useEffect(() => {
     // Clear any leftover #prayer-manual hash from older links so it can't
     // affect routing. The manual is a normal in-app tab now.
-    if (window.location.hash) {
+    //
+    // An auth callback is left strictly alone. Supabase reads the reset
+    // token out of the address bar asynchronously, so wiping it here was
+    // capable of destroying the token before it could be used. It gets
+    // cleared later, once it has actually been spent.
+    if (window.location.hash && !hasAuthCallback) {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     }
   }, []);
@@ -83,7 +95,11 @@ export default function App() {
       setSession(s);
       if (s) loadProfile(s.user.id); else setLoading(false);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      // Newer Supabase projects send a short code with nothing in the
+      // address bar to say what it is for. This event is the only signal,
+      // so it is caught here as well as read from the URL above.
+      if (event === "PASSWORD_RECOVERY") setRecovery(true);
       setSession(s);
       if (s) loadProfile(s.user.id);
       else { setProfile(null); setLoading(false); }
@@ -121,7 +137,23 @@ export default function App() {
     );
   }
 
-  if (!session) return <LoginScreen />;
+  if (!session) return <LoginScreen linkError={linkError} />;
+
+  // Sits above the profile check on purpose. A reset link signs somebody
+  // in, so without this they would land inside the hub having never
+  // chosen a password.
+  if (recovery) {
+    return (
+      <SetPasswordScreen
+        recovery
+        email={session.user?.email}
+        showToast={showToast}
+        onDone={() => { setRecovery(false); clearAuthCallbackFromUrl(); }}
+        onCancel={() => { setRecovery(false); clearAuthCallbackFromUrl(); signOut(); }}
+      />
+    );
+  }
+
   if (!profile) return <SignupPending user={session.user} onComplete={() => loadProfile(session.user.id)} />;
 
   // Team Members have view-only access and don't get Programme Operations.

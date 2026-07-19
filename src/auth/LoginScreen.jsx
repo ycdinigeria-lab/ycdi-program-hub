@@ -2,14 +2,20 @@ import { useState } from "react";
 import { supabase } from "../lib/supabase.js";
 import { B, GFONTS, inp, btnP } from "../theme.js";
 import { YCDILogo } from "../components/ui.jsx";
+import { returnAddress } from "../lib/authCallback.js";
 
-export default function LoginScreen() {
+// BATCH4C-MARKER login
+
+export default function LoginScreen({ linkError }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [notice, setNotice] = useState("");
-  const [mode, setMode] = useState("login"); // login | signup | reset
+  // Arriving from a dead reset link opens straight onto the reset form
+  // with an explanation, rather than dumping somebody on a sign-in box
+  // they already know they cannot get past.
+  const [mode, setMode] = useState(linkError ? "reset" : "login"); // login | signup | reset
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -22,7 +28,11 @@ export default function LoginScreen() {
   async function handleSignup(e) {
     e.preventDefault();
     setBusy(true); setErr(""); setNotice("");
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: returnAddress() },
+    });
     if (error) { setErr(error.message); setBusy(false); return; }
     setBusy(false);
     setMode("login");
@@ -32,11 +42,17 @@ export default function LoginScreen() {
   async function handleReset(e) {
     e.preventDefault();
     setBusy(true); setErr(""); setNotice("");
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    // Without this the link goes wherever the Supabase dashboard's Site
+    // URL points, which for a long time was http://localhost:3000, so
+    // every reset email sent people to their own machine. Working it out
+    // from the current address means it follows the app across domains
+    // instead of needing a dashboard change every time.
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: returnAddress(),
+    });
     if (error) { setErr(error.message); setBusy(false); return; }
     setBusy(false);
-    setMode("login");
-    setNotice("Password reset email sent. Check your inbox.");
+    setNotice("Reset email sent to " + email + ". The link works once and lasts an hour. Check your spam folder if it does not arrive within a few minutes.");
   }
 
   const submit = mode === "login" ? handleLogin : mode === "signup" ? handleSignup : handleReset;
@@ -52,6 +68,12 @@ export default function LoginScreen() {
         </div>
 
         <div style={{ background: B.white, borderRadius: 14, padding: "28px 28px 24px" }}>
+          {linkError && mode === "reset" && !notice ? (
+            <div style={{ background: B.redLight, color: B.red, borderRadius: 8, padding: "10px 12px", fontSize: 12, marginBottom: 16, lineHeight: 1.55 }}>
+              {linkError}
+            </div>
+          ) : null}
+
           {notice ? (
             <div style={{ background: B.blueLight, color: B.blueDark, borderRadius: 8, padding: "10px 12px", fontSize: 12, marginBottom: 16, lineHeight: 1.5 }}>{notice}</div>
           ) : null}
