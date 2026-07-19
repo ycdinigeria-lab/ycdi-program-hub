@@ -1,7 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../lib/supabase.js";
 import { B, inp, sel, ta, btnP, btnR, btnG } from "../theme.js";
 import { Card, SHead, Field } from "../components/ui.jsx";
+import { usePaged } from "../lib/paging.js";
+import { ShowMore } from "../components/ShowMore.jsx";
+
+// The register is drawn a page at a time. Nothing is hidden from anyone
+// who could already see it; this only limits how much is painted at once.
+//
+// BATCH4-MARKER safeguarding-paging
+const MAX_ROWS = 1000;
 
 // The five scenarios from the Abuse Reporting Procedures. The wording
 // is the policy's, not a paraphrase, because somebody choosing under
@@ -366,9 +374,10 @@ function Compliance({ showToast }) {
     });
   }, [showToast]);
 
-  if (loading) return <Card style={{ textAlign: "center", padding: 30, color: B.muted, fontSize: 13 }}>Loading…</Card>;
+  const problems = useMemo(() => rows.filter((r) => !r.cleared), [rows]);
+  const paged = usePaged(problems, "compliance");
 
-  const problems = rows.filter((r) => !r.cleared);
+  if (loading) return <Card style={{ textAlign: "center", padding: 30, color: B.muted, fontSize: 13 }}>Loading…</Card>;
 
   return (
     <>
@@ -381,9 +390,10 @@ function Compliance({ showToast }) {
           Everyone active is cleared to work with children.
         </Card>
       ) : (
+        <>
         <Card style={{ padding: 0, overflow: "hidden" }}>
-          {problems.map((r, i) => (
-            <div key={r.profile_id} style={{ padding: "12px 16px", borderBottom: i === problems.length - 1 ? "none" : "1px solid " + B.offWhite }}>
+          {paged.visible.map((r, i) => (
+            <div key={r.profile_id} style={{ padding: "12px 16px", borderBottom: i === paged.visible.length - 1 ? "none" : "1px solid " + B.offWhite }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Montserrat',sans-serif" }}>{r.full_name}</div>
@@ -398,6 +408,8 @@ function Compliance({ showToast }) {
             </div>
           ))}
         </Card>
+        <ShowMore paged={paged} noun="more" />
+        </>
       )}
 
       {rows.length > problems.length ? (
@@ -423,8 +435,9 @@ export default function SafeguardingSection({ profile, chapters, showToast }) {
   const load = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase.from("safeguarding_incidents")
-      .select("id, reference, scenario, status, occurred_on, reported_on, chapters(name)")
-      .order("reported_on", { ascending: false });
+      .select("id, reference, scenario, status, reported_on, chapters(name)")
+      .order("reported_on", { ascending: false })
+      .range(0, MAX_ROWS - 1);
     setRows(data || []);
     const { data: o } = await supabase.rpc("incidents_overdue");
     setOverdue(o || []);
@@ -432,6 +445,8 @@ export default function SafeguardingSection({ profile, chapters, showToast }) {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const paged = usePaged(rows, "register");
 
   if (openId) return <IncidentDetail id={openId} profile={profile} showToast={showToast} onBack={() => { setOpenId(null); load(); }} />;
   if (raising) return <RaiseConcern profile={profile} chapters={chapters} showToast={showToast} onCancel={() => setRaising(false)} onSaved={() => { setRaising(false); load(); }} />;
@@ -467,11 +482,12 @@ export default function SafeguardingSection({ profile, chapters, showToast }) {
               Nothing in the register. An empty register is good news, but only if people know how to use it. Every volunteer should know this screen exists before they need it.
             </Card>
           ) : (
+            <>
             <Card style={{ padding: 0, overflow: "hidden" }}>
-              {rows.map((r, i) => (
+              {paged.visible.map((r, i) => (
                 <button key={r.id} onClick={() => setOpenId(r.id)} style={{
                   display: "block", width: "100%", textAlign: "left", background: B.white, border: "none",
-                  borderBottom: i === rows.length - 1 ? "none" : "1px solid " + B.offWhite,
+                  borderBottom: i === paged.visible.length - 1 ? "none" : "1px solid " + B.offWhite,
                   padding: "12px 16px", cursor: "pointer", fontFamily: "'Open Sans',sans-serif",
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
@@ -486,6 +502,8 @@ export default function SafeguardingSection({ profile, chapters, showToast }) {
                 </button>
               ))}
             </Card>
+            <ShowMore paged={paged} noun="older entries" />
+            </>
           )}
         </>
       )}

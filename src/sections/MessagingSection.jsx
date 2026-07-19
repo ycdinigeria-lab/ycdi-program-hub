@@ -3,6 +3,17 @@ import { supabase } from "../lib/supabase.js";
 import { B, inp, btnP, btnG } from "../theme.js";
 import { Card } from "../components/ui.jsx";
 import { useIsMobile } from "../useIsMobile.js";
+import { useVisiblePoll } from "../lib/poll.js";
+
+// Opening a busy channel used to pull two hundred messages, and then pull
+// the same two hundred again every twenty seconds for as long as it stayed
+// open. It now starts with the most recent stretch and fetches further back
+// only when somebody asks for it.
+//
+// BATCH4-MARKER messaging-perf
+const FIRST_PAGE = 60;
+const OLDER_STEP = 100;
+const MAX_MESSAGES = 1000;
 
 const ICON = {
   hash: "M9 3l-.7 4H4.4l-.3 2h4l-.7 4H3.4l-.3 2h4l-.7 4h2l.7-4h4l-.7 4h2l.7-4h3.9l.3-2h-3.9l.7-4h3.9l.3-2h-3.9l.7-4h-2l-.7 4h-4L11 3zm.9 6h4l-.7 4h-4z",
@@ -119,12 +130,15 @@ function Conversation({ channel, profile, onBack, onChanged, showToast, isMobile
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [limit, setLimit] = useState(FIRST_PAGE);
+  const [maybeMore, setMaybeMore] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const endRef = useRef(null);
   const boxRef = useRef(null);
 
   const load = useCallback(async (quiet) => {
     if (!quiet) setLoading(true);
-    const { data, error } = await supabase.rpc("channel_messages", { cid: channel.id, limit_n: 200 });
+    const { data, error } = await supabase.rpc("channel_messages", { cid: channel.id, limit_n: limit });
     if (error) {
       showToast("Could not load messages: " + error.message, "error");
       setLoading(false);
@@ -132,13 +146,26 @@ function Conversation({ channel, profile, onBack, onChanged, showToast, isMobile
     }
     // The database hands these back newest first so the limit takes the
     // most recent ones. Flip them for reading top to bottom.
-    setMsgs((data || []).slice().reverse());
+    const rows = data || [];
+    // A full page back suggests there is more behind it. Worst case the
+    // button appears once and finds nothing, which is harmless.
+    setMaybeMore(rows.length >= limit && limit < MAX_MESSAGES);
+    setMsgs(rows.slice().reverse());
     setLoading(false);
     await supabase.rpc("mark_channel_read", { cid: channel.id });
     onChanged();
-  }, [channel.id, showToast, onChanged]);
+  }, [channel.id, limit, showToast, onChanged]);
 
   useEffect(() => { load(); }, [load]);
+
+  // A new conversation starts at the most recent page again.
+  useEffect(() => { setLimit(FIRST_PAGE); }, [channel.id]);
+
+  async function loadOlder() {
+    setLoadingOlder(true);
+    setLimit((n) => Math.min(MAX_MESSAGES, n + OLDER_STEP));
+    setLoadingOlder(false);
+  }
 
   // Live updates where available, with a slow check as a backstop in case
   // realtime isn't switched on for this project.
@@ -150,20 +177,18 @@ function Conversation({ channel, profile, onBack, onChanged, showToast, isMobile
         () => load(true))
       .subscribe();
 
-    const poll = setInterval(() => load(true), 20000);
-    const onFocus = () => load(true);
-    window.addEventListener("focus", onFocus);
-
-    return () => {
-      supabase.removeChannel(sub);
-      clearInterval(poll);
-      window.removeEventListener("focus", onFocus);
-    };
+    return () => { supabase.removeChannel(sub); };
   }, [channel.id, load]);
 
+  useVisiblePoll(() => load(true), 20000);
+
+  // Scroll on the newest message changing, not on the count changing.
+  // Fetching older ones also changes the count, and jumping to the bottom
+  // the moment somebody asks to read further back is exactly wrong.
+  const newestId = msgs.length ? msgs[msgs.length - 1].id : null;
   useEffect(() => {
     if (endRef.current) endRef.current.scrollIntoView({ block: "end" });
-  }, [msgs.length]);
+  }, [newestId]);
 
   async function send(e) {
     if (e) e.preventDefault();
@@ -220,7 +245,19 @@ function Conversation({ channel, profile, onBack, onChanged, showToast, isMobile
             Nothing here yet.<br />Say the first thing.
           </div>
         ) : (
-          msgs.map((m) => {
+          <>
+          {maybeMore ? (
+            <div style={{ textAlign: "center", marginBottom: 10 }}>
+              <button
+                onClick={loadOlder}
+                disabled={loadingOlder}
+                style={{ background: B.white, border: `1px solid ${B.border}`, color: B.muted, borderRadius: 20, padding: "6px 16px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "'Montserrat',sans-serif" }}
+              >
+                {loadingOlder ? "Loading…" : "Load earlier messages"}
+              </button>
+            </div>
+          ) : null}
+          {msgs.map((m) => {
             const mine = m.sender_id === profile.id;
             const day = dayLabel(m.created_at);
             const showDay = day !== lastDay;
@@ -252,7 +289,8 @@ function Conversation({ channel, profile, onBack, onChanged, showToast, isMobile
                 </div>
               </div>
             );
-          })
+          })}
+          </>
         )}
         <div ref={endRef} />
       </div>
@@ -301,10 +339,7 @@ export default function MessagingSection({ profile, showToast }) {
 
   useEffect(() => { load(); }, [load]);
 
-  useEffect(() => {
-    const poll = setInterval(load, 25000);
-    return () => clearInterval(poll);
-  }, [load]);
+  useVisiblePoll(load, 25000);
 
   const active = channels.find((c) => c.id === activeId) || null;
 

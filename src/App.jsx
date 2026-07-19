@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { supabase } from "./lib/supabase.js";
 import { B, GFONTS } from "./theme.js";
 import { useIsMobile } from "./useIsMobile.js";
@@ -10,11 +10,26 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import NotificationBell from "./components/NotificationBell.jsx";
 import { useOnline } from "./useOnline.js";
 import { humanise } from "./lib/errors.js";
-import SpiritualSection from "./sections/SpiritualSection.jsx";
-import ProgrammesSection from "./sections/programmes/ProgrammesSection.jsx";
-import PrayerManualSection from "./sections/PrayerManualSection.jsx";
-import DirectorySection from "./sections/DirectorySection.jsx";
 import MoreSection, { moreFeatureTitle } from "./sections/MoreSection.jsx";
+import { onUpdateReady, applyUpdate } from "./lib/pwa.js";
+
+// Each tab is fetched the first time it is opened rather than sitting in
+// the file that has to download before the login screen can appear. Most
+// people use two or three of these, so the rest is never fetched at all.
+// MoreSection itself stays here because it is small and it holds the list
+// of feature names the page title reads from.
+const SpiritualSection = lazy(() => import("./sections/SpiritualSection.jsx"));
+const ProgrammesSection = lazy(() => import("./sections/programmes/ProgrammesSection.jsx"));
+const PrayerManualSection = lazy(() => import("./sections/PrayerManualSection.jsx"));
+const DirectorySection = lazy(() => import("./sections/DirectorySection.jsx"));
+
+export function SectionLoading() {
+  return (
+    <div style={{ padding: "44px 20px", textAlign: "center", color: B.muted, fontSize: 13 }}>
+      Loading…
+    </div>
+  );
+}
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -24,8 +39,13 @@ export default function App() {
   const [section, setSection] = useState("programmes");
   const [moreView, setMoreView] = useState(null);
   const [toast, setToast] = useState(null);
+  const [updateReady, setUpdateReady] = useState(false);
   const isMobile = useIsMobile();
   const online = useOnline();
+
+  // The service worker tells us when a newer build has finished
+  // downloading. Nothing reloads until the person presses the button.
+  useEffect(() => onUpdateReady(() => setUpdateReady(true)), []);
 
   // Leaving the More tab closes whatever was open inside it, so coming back
   // always lands on the list of features rather than mid-way into one.
@@ -237,6 +257,18 @@ export default function App() {
 
       <div style={{ background: B.yellow, height: 4 }} />
 
+      {updateReady ? (
+        <div style={{ background: B.blueDark, color: B.white, padding: "9px 14px", fontSize: 12.5, textAlign: "center", lineHeight: 1.5, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+          A newer version of the hub is ready.
+          <button
+            onClick={applyUpdate}
+            style={{ background: B.white, color: B.blueDark, border: "none", borderRadius: 20, padding: "5px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Montserrat',sans-serif" }}
+          >
+            Refresh now
+          </button>
+        </div>
+      ) : null}
+
       {!online ? (
         <div style={{ background: "#3A3A3A", color: "#fff", padding: "8px 14px", fontSize: 12, textAlign: "center", lineHeight: 1.5 }}>
           You're offline. You can still read what's already loaded, but nothing will save until the connection is back.
@@ -259,13 +291,15 @@ export default function App() {
           fullName={profile.full_name}
           onBack={() => goToSection("programmes")}
         >
-          {section === "programmes" && profile.role !== "TM" ? (
-            <ProgrammesSection profile={profile} chapters={chapters} showToast={showToast} />
-          ) : null}
-          {section === "spiritual" ? <SpiritualSection profile={profile} showToast={showToast} /> : null}
-          {section === "prayer" ? <PrayerManualSection /> : null}
-          {section === "directory" ? <DirectorySection profile={profile} chapters={chapters} showToast={showToast} /> : null}
-          {section === "more" ? <MoreSection profile={profile} chapters={chapters} showToast={showToast} view={moreView} setView={setMoreView} /> : null}
+          <Suspense fallback={<SectionLoading />}>
+            {section === "programmes" && profile.role !== "TM" ? (
+              <ProgrammesSection profile={profile} chapters={chapters} showToast={showToast} />
+            ) : null}
+            {section === "spiritual" ? <SpiritualSection profile={profile} showToast={showToast} /> : null}
+            {section === "prayer" ? <PrayerManualSection /> : null}
+            {section === "directory" ? <DirectorySection profile={profile} chapters={chapters} showToast={showToast} /> : null}
+            {section === "more" ? <MoreSection profile={profile} chapters={chapters} showToast={showToast} view={moreView} setView={setMoreView} /> : null}
+          </Suspense>
         </ErrorBoundary>
       </div>
 

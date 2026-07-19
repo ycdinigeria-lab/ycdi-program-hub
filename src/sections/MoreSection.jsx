@@ -1,10 +1,17 @@
+import { lazy, Suspense } from "react";
 import { B } from "../theme.js";
-import DocumentsSection from "./DocumentsSection.jsx";
-import CalendarNoticesSection from "./CalendarNoticesSection.jsx";
-import AdminSection from "./AdminSection.jsx";
-import MessagingSection from "./MessagingSection.jsx";
-import ParticipantsSection from "./ParticipantsSection.jsx";
-import SafeguardingSection from "./SafeguardingSection.jsx";
+
+// Six features, most of which any one person never opens. Loading them on
+// demand keeps them out of the file that has to arrive before the login
+// screen can be drawn.
+//
+// BATCH4-MARKER more-lazy
+const DocumentsSection = lazy(() => import("./DocumentsSection.jsx"));
+const CalendarNoticesSection = lazy(() => import("./CalendarNoticesSection.jsx"));
+const AdminSection = lazy(() => import("./AdminSection.jsx"));
+const MessagingSection = lazy(() => import("./MessagingSection.jsx"));
+const ParticipantsSection = lazy(() => import("./ParticipantsSection.jsx"));
+const SafeguardingSection = lazy(() => import("./SafeguardingSection.jsx"));
 
 // Everything that lives behind the "More" tab. New features get added here
 // instead of adding another button to the top navigation, which was already
@@ -150,7 +157,9 @@ export default function MoreSection({ profile, chapters, showToast, view, setVie
         >
           ‹ Back to More
         </button>
-        {active.render({ profile, chapters, showToast })}
+        <Suspense fallback={<div style={{ padding: "40px 20px", textAlign: "center", color: B.muted, fontSize: 13 }}>Loading…</div>}>
+          {active.render({ profile, chapters, showToast })}
+        </Suspense>
       </div>
     );
   }

@@ -1,10 +1,20 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../lib/supabase.js";
 import { B, inp, sel, ta, btnP, btnG } from "../theme.js";
 import { Card, SHead, Field, StatCard } from "../components/ui.jsx";
+import { usePaged } from "../lib/paging.js";
+import { ShowMore } from "../components/ShowMore.jsx";
 
 export const STAGES = ["Contact", "Connect", "Commit", "Grow", "Multiply"];
 export const AGE_BANDS = ["10-12", "13-15", "16-17", "18+"];
+
+// A hard ceiling on how many rows are ever pulled in one go. Well above
+// anything YCDI holds today, and it stops a future chapter with thousands
+// of names from freezing a phone. If it is ever hit the screen says so
+// rather than quietly showing a partial list.
+//
+// BATCH4-MARKER participants-paging
+const MAX_ROWS = 2000;
 
 const STAGE_COLOUR = {
   Contact: B.muted,
@@ -399,9 +409,12 @@ export default function ParticipantsSection({ profile, chapters, showToast }) {
 
   const load = useCallback(async () => {
     setLoading(true);
+    // Age band is not drawn in the list, so it is not fetched for the list.
+    // The detail screen loads the full row when one is opened.
     const { data } = await supabase.from("participants")
-      .select("id, full_name, age_band, class_level, school, stage, active, chapter_id, chapters(name)")
-      .order("full_name");
+      .select("id, full_name, class_level, school, stage, active, chapter_id, chapters(name)")
+      .order("full_name")
+      .range(0, MAX_ROWS - 1);
     setPeople(data || []);
     const { data: s } = await supabase.rpc("stage_summary", { p_chapter: null });
     setSummary(s || []);
@@ -412,6 +425,21 @@ export default function ParticipantsSection({ profile, chapters, showToast }) {
 
   useEffect(() => { load(); }, [load]);
 
+  // Searching still runs across every participant that was loaded. Only the
+  // drawing is limited, so nobody can be missed by a search.
+  const matches = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return people.filter((p) => {
+      if (stageFilter && p.stage !== stageFilter) return false;
+      if (!needle) return true;
+      return [p.full_name, p.school, p.class_level, p.chapters?.name].filter(Boolean).some((v) => v.toLowerCase().includes(needle));
+    });
+  }, [people, q, stageFilter]);
+
+  // Hooks have to run on every render, so this sits above the early returns
+  // rather than down beside the list it feeds.
+  const paged = usePaged(matches, q + "\u0000" + stageFilter);
+
   if (openId) {
     return <ParticipantDetail id={openId} profile={profile} showToast={showToast} onBack={() => { setOpenId(null); load(); }} />;
   }
@@ -421,13 +449,6 @@ export default function ParticipantsSection({ profile, chapters, showToast }) {
   }
 
   if (loading) return <Card style={{ textAlign: "center", padding: 30, color: B.muted, fontSize: 13 }}>Loading participants…</Card>;
-
-  const needle = q.trim().toLowerCase();
-  const shown = people.filter((p) => {
-    if (stageFilter && p.stage !== stageFilter) return false;
-    if (!needle) return true;
-    return [p.full_name, p.school, p.class_level, p.chapters?.name].filter(Boolean).some((v) => v.toLowerCase().includes(needle));
-  });
 
   const totals = STAGES.map((s) => ({
     stage: s,
@@ -464,21 +485,28 @@ export default function ParticipantsSection({ profile, chapters, showToast }) {
         </div>
       </Card>
 
-      {shown.length === 0 ? (
+      {people.length >= MAX_ROWS ? (
+        <div style={{ background: B.yellowLight, border: "1px solid " + B.yellow, borderRadius: 8, padding: "10px 13px", marginBottom: 12, fontSize: 12, color: "#6b5200", lineHeight: 1.55 }}>
+          This is the first {MAX_ROWS} participants by name. Use the search box to find anyone past that.
+        </div>
+      ) : null}
+
+      {matches.length === 0 ? (
         <Card style={{ textAlign: "center", padding: 30, color: B.muted, fontSize: 13, lineHeight: 1.6 }}>
           {people.length === 0
             ? "No participants recorded yet. Once young people are added here, the pathway stops being a page of theory and starts being a record of who is actually moving."
             : "Nobody matches that."}
         </Card>
       ) : (
+        <>
         <Card style={{ padding: 0, overflow: "hidden" }}>
-          {shown.map((p, i) => (
+          {paged.visible.map((p, i) => (
             <button
               key={p.id}
               onClick={() => setOpenId(p.id)}
               style={{
                 display: "block", width: "100%", textAlign: "left", background: B.white,
-                border: "none", borderBottom: i === shown.length - 1 ? "none" : "1px solid " + B.offWhite,
+                border: "none", borderBottom: i === paged.visible.length - 1 ? "none" : "1px solid " + B.offWhite,
                 padding: "12px 16px", cursor: "pointer", fontFamily: "'Open Sans',sans-serif",
               }}
             >
@@ -498,6 +526,8 @@ export default function ParticipantsSection({ profile, chapters, showToast }) {
             </button>
           ))}
         </Card>
+        <ShowMore paged={paged} noun="more participants" />
+        </>
       )}
     </>
   );

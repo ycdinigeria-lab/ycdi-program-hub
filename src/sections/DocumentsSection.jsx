@@ -2,6 +2,11 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "../lib/supabase.js";
 import { B, inp, ta, sel, btnP, btnG } from "../theme.js";
 import { Card, SHead, Field } from "../components/ui.jsx";
+import { usePaged } from "../lib/paging.js";
+import { ShowMore } from "../components/ShowMore.jsx";
+import { compressImage } from "../lib/imageCompress.js";
+
+// BATCH4-MARKER documents-perf
 
 const BUCKET = "hub-documents";
 const MAX_DOC_MB = 25;
@@ -123,7 +128,10 @@ function DocumentComposer({ profile, categories, editing, onClose, onSaved, show
       }
       if (cover) {
         if (editing) oldCover = editing.cover_path;
-        row.cover_path = await uploadTo("covers", cover);
+        // Only the cover thumbnail is shrunk. The document itself is
+        // uploaded exactly as given, byte for byte, because it may be a
+        // signed policy or a scan somebody needs to print.
+        row.cover_path = await uploadTo("covers", await compressImage(cover, { maxEdge: 800 }));
       }
 
       let error;
@@ -397,11 +405,18 @@ export default function DocumentsSection({ profile, showToast }) {
     // Cover images live in a private bucket, so each one gets a short-lived
     // signed link on load. They expire after an hour, which is fine because
     // the page reloads them every time it opens.
-    await Promise.all(rows.map(async (row) => {
-      if (!row.cover_path) return;
-      const { data: sd } = await supabase.storage.from(BUCKET).createSignedUrl(row.cover_path, 3600);
-      if (sd) row.cover_url = sd.signedUrl;
-    }));
+    // One request for the whole page of covers rather than one each. A
+    // library of forty documents used to mean forty round trips before any
+    // thumbnail appeared.
+    const withCovers = rows.filter((r) => r.cover_path);
+    if (withCovers.length) {
+      const { data: signed } = await supabase.storage
+        .from(BUCKET)
+        .createSignedUrls(withCovers.map((r) => r.cover_path), 3600);
+      (signed || []).forEach((r, i) => {
+        if (r && r.signedUrl && withCovers[i]) withCovers[i].cover_url = r.signedUrl;
+      });
+    }
     setErr("");
     setCats(c || []);
     setDocs(rows);
@@ -425,6 +440,8 @@ export default function DocumentsSection({ profile, showToast }) {
         .filter(Boolean).some((v) => v.toLowerCase().includes(needle));
     });
   }, [docs, filter, q, catById]);
+
+  const paged = usePaged(visible, q + "\u0000" + filter);
 
   async function download(d) {
     setBusyId(d.id);
@@ -506,8 +523,9 @@ export default function DocumentsSection({ profile, showToast }) {
           {q.trim() ? `Nothing matches "${q.trim()}".` : "No documents in here yet."}
         </Card>
       ) : (
+        <>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 228px), 1fr))", gap: 14 }}>
-          {visible.map((d) => (
+          {paged.visible.map((d) => (
             <DocumentCard
               key={d.id}
               doc={d}
@@ -520,6 +538,8 @@ export default function DocumentsSection({ profile, showToast }) {
             />
           ))}
         </div>
+        <ShowMore paged={paged} noun="more documents" />
+        </>
       )}
 
       {composing ? (

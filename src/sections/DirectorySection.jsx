@@ -1,6 +1,11 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase.js";
 import { B } from "../theme.js";
+import { usePaged } from "../lib/paging.js";
+import { ShowMore } from "../components/ShowMore.jsx";
+import { compressImage } from "../lib/imageCompress.js";
+
+// BATCH4-MARKER directory-perf
 
 const NAT = "National Leadership";
 
@@ -190,15 +195,30 @@ export default function DirectorySection({ profile, chapters, showToast }) {
     const phoneBy = {};
     (phones || []).forEach((r) => { phoneBy[r.member_id] = r.phone; });
     const rows = (data || []).map((d) => ({ ...d, chapter_name: d.chapters?.name || null, phone: phoneBy[d.id] || "" }));
-    await Promise.all(rows.map(async (d) => {
+
+    // Photos live in a private bucket and need a signed link. This used to
+    // be one network request per person, so a directory of sixty people
+    // meant sixty round trips before a single face appeared. Supabase can
+    // sign a whole list at once, so now it is one.
+    const marker = "/member-photos/";
+    const wanted = [];
+    rows.forEach((d) => {
       if (!d.photo_url) return;
-      const marker = "/member-photos/";
       const i = d.photo_url.indexOf(marker);
       if (i === -1) return;
-      const path = d.photo_url.slice(i + marker.length);
-      const { data: sd } = await supabase.storage.from("member-photos").createSignedUrl(path, 3600);
-      if (sd) d.photo_signed_url = sd.signedUrl;
-    }));
+      wanted.push({ row: d, path: d.photo_url.slice(i + marker.length) });
+    });
+    if (wanted.length) {
+      const { data: signed } = await supabase.storage
+        .from("member-photos")
+        .createSignedUrls(wanted.map((w) => w.path), 3600);
+      // The result comes back in the order it was asked for, and a failed
+      // one carries an error instead of a link. Those simply fall back to
+      // initials, which is what happened before anyway.
+      (signed || []).forEach((r, i) => {
+        if (r && r.signedUrl && wanted[i]) wanted[i].row.photo_signed_url = r.signedUrl;
+      });
+    }
     setMembers(rows);
     setLoading(false);
   }, []);
@@ -218,9 +238,16 @@ export default function DirectorySection({ profile, chapters, showToast }) {
     });
   }, [members, q, chapterFilter]);
 
+  const paged = usePaged(filtered, q + "\u0000" + chapterFilter);
+
+  // Depends on the count rather than the sliced array, because slicing
+  // hands back a new array every render and that would defeat the memo
+  // inside the very screen this batch is meant to speed up.
+  const shownCount = paged.visible.length;
+
   const grouped = useMemo(() => {
     const g = {};
-    filtered.forEach((m) => {
+    filtered.slice(0, shownCount).forEach((m) => {
       const key = m.chapter_name || NAT;
       (g[key] = g[key] || []).push(m);
     });
@@ -231,9 +258,13 @@ export default function DirectorySection({ profile, chapters, showToast }) {
         return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
       })
       .map((k) => [k, g[k].sort((a, b) => a.full_name.localeCompare(b.full_name))]);
-  }, [filtered, chapters]);
+  }, [filtered, shownCount, chapters]);
 
-  async function uploadPhoto(file) {
+  async function uploadPhoto(original) {
+    // A photo straight off a phone is often four megabytes and four
+    // thousand pixels wide, for something drawn at 56 pixels across. It is
+    // shrunk here, on the device, before it goes anywhere near the network.
+    const file = await compressImage(original, { maxEdge: 640 });
     const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
     const name = `${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage.from("member-photos").upload(name, file, { upsert: true, cacheControl: "3600" });
@@ -317,7 +348,8 @@ export default function DirectorySection({ profile, chapters, showToast }) {
       ) : filtered.length === 0 ? (
         <div style={{ padding: 30, textAlign: "center", color: B.muted, fontSize: 13 }}>No one matches that yet.</div>
       ) : (
-        grouped.map(([chapterName, people]) => (
+        <>
+        {grouped.map(([chapterName, people]) => (
           <div key={chapterName} style={{ marginBottom: 24 }}>
             <div style={{ fontFamily: "'Montserrat',sans-serif", fontWeight: 700, fontSize: 12, color: B.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10, borderBottom: `2px solid ${B.yellow}`, paddingBottom: 5 }}>
               {chapterName} <span style={{ color: B.border }}>· {people.length}</span>
@@ -328,7 +360,9 @@ export default function DirectorySection({ profile, chapters, showToast }) {
               ))}
             </div>
           </div>
-        ))
+        ))}
+        <ShowMore paged={paged} noun="more people" />
+        </>
       )}
 
       {editing ? (

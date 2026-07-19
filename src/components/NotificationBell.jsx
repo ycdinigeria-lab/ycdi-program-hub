@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase.js";
 import { B } from "../theme.js";
 import { reportError } from "../lib/errors.js";
+import { useVisiblePoll } from "../lib/poll.js";
 
 // How often the bell asks the database whether anything new arrived.
 // Sixty seconds is a deliberate compromise: often enough that nobody
@@ -54,15 +55,12 @@ export default function NotificationBell({ onOpen, isMobile }) {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    loadCount();
-    const t = setInterval(loadCount, POLL_MS);
-    // Coming back to the tab is the moment somebody most wants an
-    // accurate count, so don't make them wait out the rest of the poll.
-    const onVisible = () => { if (!document.hidden) loadCount(); };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => { clearInterval(t); document.removeEventListener("visibilitychange", onVisible); };
-  }, [loadCount]);
+  // Coming back to the tab is the moment somebody most wants an accurate
+  // count, so the helper checks straight away on return. It also stops the
+  // interval entirely while the phone is in a pocket.
+  // BATCH4-MARKER bell-poll
+  useEffect(() => { loadCount(); }, [loadCount]);
+  useVisiblePoll(loadCount, POLL_MS);
 
   useEffect(() => {
     if (!open) return;
