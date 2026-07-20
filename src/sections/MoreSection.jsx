@@ -20,6 +20,8 @@ const MyProfileSection = lazy(() => import("./MyProfileSection.jsx"));
 // BATCH6B-MARKER more-register-and-audit
 const VolunteersSection = lazy(() => import("./VolunteersSection.jsx"));
 const AuditLogSection = lazy(() => import("./AuditLogSection.jsx"));
+// BATCH7A-MARKER more-applications
+const ApplicationsSection = lazy(() => import("./ApplicationsSection.jsx"));
 
 // Everything that lives behind the "More" tab. New features get added here
 // instead of adding another button to the top navigation, which was already
@@ -37,6 +39,7 @@ const ICONS = {
   admin: "M12 2l8 4v6c0 5-3.4 8.7-8 10-4.6-1.3-8-5-8-10V6zm0 2.2L6 6.9v5.1c0 3.8 2.4 6.6 6 7.7 3.6-1.1 6-3.9 6-7.7V6.9zM11 15.5l-3-3 1.4-1.4L11 12.6l3.6-3.6L16 10.4z",
   key: "M12.65 10A6 6 0 105 16a6 6 0 007.65-4H17v4h2v-4h2v-2zM7 14a2 2 0 110-4 2 2 0 010 4z",
   chart: "M3 3h2v16h16v2H3zm5 9h2.5v6H8zm4.5-5H15v11h-2.5zm4.5 3h2.5v8H17z",
+  inbox: "M4 3h16v11h-5a3 3 0 01-6 0H4zm2 2v7h1.2a5 5 0 009.6 0H18V5zm2.5 9.5h7V16h-7z",
   hands: "M11 2h2v9h-2zm-4 3h2v6H7zm8 0h2v6h-2zM5 12h14v3a7 7 0 01-7 7 7 7 0 01-7-7z",
   ledger: "M5 2h11l3 3v17H5zm2 2v16h10V6.2L15.8 4zM8 8h8v1.7H8zm0 3.4h8v1.7H8zm0 3.4h5v1.7H8z",
   badge: "M12 2l2.4 1.8 3-.3 1 2.8 2.6 1.5-1 2.9 1 2.9-2.6 1.5-1 2.8-3-.3L12 22l-2.4-1.8-3 .3-1-2.8L3 16.2l1-2.9-1-2.9 2.6-1.5 1-2.8 3 .3zm0 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM7.6 17.4a5.6 5.6 0 018.8 0 6.7 6.7 0 01-8.8 0z",
@@ -123,6 +126,20 @@ export const MORE_FEATURES = [
     render: (props) => <MyProfileSection profile={props.profile} showToast={props.showToast} />,
   },
   {
+    id: "applications",
+    title: "Volunteer Applications",
+    blurb: "Applications arriving from the public form, what stage each one is at, and the link to share.",
+    icon: ICONS.inbox,
+    accent: B.blue,
+    // Coordinators and the National Coordinator, and deliberately not
+    // admins. An application carries a declaration of convictions and
+    // prior safeguarding concerns, which makes it screening material
+    // rather than personnel data. The database refuses admins too.
+    roles: ["NC", "RC"],
+    adminExempt: true,
+    render: (props) => <ApplicationsSection {...props} />,
+  },
+  {
     id: "volunteers",
     title: "Volunteer Register",
     blurb: "Everyone in your chapter, where they are in the six onboarding steps, who mentors them, and who has gone quiet.",
@@ -207,8 +224,14 @@ export default function MoreSection({ profile, chapters, showToast, view, setVie
   const visibleFeatures = MORE_FEATURES.filter((f) => {
     if (f.adminOnly && !profile.is_admin) return false;
     if (f.roles) {
+      // Most cards let an admin in, because admin is how the hub gets
+      // supported. A few must not. Screening material carries convictions
+      // and safeguarding disclosures, and admin is a technical flag that
+      // ends up on whoever keeps the system running, so those cards say
+      // so with adminExempt and the database refuses them as well.
+      const adminMayEnter = profile.is_admin && !f.adminExempt;
       const allowed = f.roles.includes(profile.role)
-        || (f.id === "safeguarding" ? profile.is_safeguarding_lead : profile.is_admin);
+        || (f.id === "safeguarding" ? profile.is_safeguarding_lead : adminMayEnter);
       if (!allowed) return false;
     }
     return true;

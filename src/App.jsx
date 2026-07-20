@@ -16,6 +16,9 @@ import { arrivedForPasswordRecovery, hasAuthCallback, authLinkError, clearAuthCa
 import SetPasswordScreen from "./auth/SetPasswordScreen.jsx";
 // BATCH6B-MARKER app-a11y
 import { A11Y_CSS, scrollToTop } from "./lib/a11y.js";
+// BATCH7A-MARKER app-public-route
+import { isApplyPath } from "./lib/application.js";
+const ApplyScreen = lazy(() => import("./public/ApplyScreen.jsx"));
 
 // Each tab is fetched the first time it is opened rather than sitting in
 // the file that has to download before the login screen can appear. Most
@@ -138,6 +141,21 @@ export default function App() {
         <style>{GFONTS}</style>
         <YCDILogo height={52} dark={true} />
       </div>
+    );
+  }
+
+  // The volunteer application form, and the only page in the hub that
+  // opens without signing in. Checked before the session gate rather than
+  // after, because a stranger has no session and would otherwise be shown
+  // a login screen for an account they do not have and do not need.
+  //
+  // Netlify already sends every path to index.html, so no router is
+  // involved. The path is read once, here.
+  if (typeof window !== "undefined" && isApplyPath(window.location.pathname)) {
+    return (
+      <Suspense fallback={<SectionLoading />}>
+        <ApplyScreen />
+      </Suspense>
     );
   }
 
