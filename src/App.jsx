@@ -14,6 +14,8 @@ import MoreSection, { moreFeatureTitle } from "./sections/MoreSection.jsx";
 import { onUpdateReady, applyUpdate } from "./lib/pwa.js";
 import { arrivedForPasswordRecovery, hasAuthCallback, authLinkError, clearAuthCallbackFromUrl } from "./lib/authCallback.js";
 import SetPasswordScreen from "./auth/SetPasswordScreen.jsx";
+// BATCH6B-MARKER app-a11y
+import { A11Y_CSS, scrollToTop } from "./lib/a11y.js";
 
 // Each tab is fetched the first time it is opened rather than sitting in
 // the file that has to download before the login screen can appear. Most
@@ -27,7 +29,7 @@ const DirectorySection = lazy(() => import("./sections/DirectorySection.jsx"));
 
 export function SectionLoading() {
   return (
-    <div style={{ padding: "44px 20px", textAlign: "center", color: B.muted, fontSize: 13 }}>
+    <div role="status" aria-live="polite" style={{ padding: "44px 20px", textAlign: "center", color: B.muted, fontSize: 13 }}>
       Loading…
     </div>
   );
@@ -66,7 +68,9 @@ export default function App() {
   function openFromNotification(target, view) {
     setSection(target);
     setMoreView(target === "more" ? view : null);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    // Respects "reduce motion". A CSS media query cannot reach a
+    // scroll started from here, so it is checked in code.
+    scrollToTop();
   }
 
   function showToast(msg, type) {
@@ -130,7 +134,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: B.blue, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div role="status" aria-live="polite" aria-label="Loading the hub" style={{ minHeight: "100vh", background: B.blue, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <style>{GFONTS}</style>
         <YCDILogo height={52} dark={true} />
       </div>
@@ -174,6 +178,8 @@ export default function App() {
   return (
     <div style={{ fontFamily: "'Open Sans',Arial,sans-serif", background: B.offWhite, minHeight: "100vh", overflowX: "hidden" }}>
       <style>{GFONTS}</style>
+      <style>{A11Y_CSS}</style>
+      <a className="ycdi-skip" href="#ycdi-main">Skip to main content</a>
       <style>{`
         * { box-sizing: border-box; }
         html, body { margin: 0; padding: 0; max-width: 100%; overflow-x: hidden; }
@@ -217,14 +223,14 @@ export default function App() {
           { id: "more", label: "More", short: "More" },
         ].filter((t) => t.id !== "programmes" || profile.role !== "TM");
         const tabBtn = (t) => (
-          <button key={t.id} onClick={() => goToSection(t.id)} style={{ background: "none", border: "none", borderBottom: `3px solid ${section === t.id ? B.yellow : "transparent"}`, color: section === t.id ? B.white : "rgba(255,255,255,0.65)", padding: "14px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Montserrat',sans-serif", fontWeight: section === t.id ? 700 : 400, whiteSpace: "nowrap", flexShrink: 0 }}>
+          <button key={t.id} onClick={() => goToSection(t.id)} aria-current={section === t.id ? "page" : undefined} style={{ background: "none", border: "none", borderBottom: `3px solid ${section === t.id ? B.yellow : "transparent"}`, color: section === t.id ? B.white : "rgba(255,255,255,0.65)", padding: "14px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Montserrat',sans-serif", fontWeight: section === t.id ? 700 : 400, whiteSpace: "nowrap", flexShrink: 0 }}>
             {t.label}
           </button>
         );
         const userBlock = (
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             <NotificationBell onOpen={openFromNotification} isMobile={isMobile} />
-            <Avatar name={profile.full_name} size={30} />
+            <Avatar name={profile.full_name} size={30} decorative={!isMobile} />
             {!isMobile ? (
               <div>
                 <div style={{ fontSize: 12, color: B.white, fontWeight: 700, fontFamily: "'Montserrat',sans-serif", lineHeight: 1.2 }}>{profile.full_name}</div>
@@ -239,18 +245,20 @@ export default function App() {
 
         if (isMobile) {
           return (
-            <div style={{ position: "sticky", top: 0, zIndex: 100 }}>
+            <div className="ycdi-onblue" style={{ position: "sticky", top: 0, zIndex: 100 }}>
               <div style={{ background: B.blue, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", gap: 10 }}>
                 <YCDILogo height={32} dark markOnly />
                 {userBlock}
               </div>
-              <div style={{ background: B.blue, display: "flex", flexWrap: "wrap", gap: 6, padding: "0 10px 10px", borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: 10 }}>
+              <nav aria-label="Sections" style={{ background: B.blue, display: "flex", flexWrap: "wrap", gap: 6, padding: "0 10px 10px", borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: 10 }}>
                 {TABS.map((t) => {
                   const on = section === t.id;
                   return (
                     <button
                       key={t.id}
                       onClick={() => goToSection(t.id)}
+                      aria-current={on ? "page" : undefined}
+                      aria-label={t.label}
                       style={{
                         flex: "1 1 28%",
                         minWidth: 0,
@@ -272,25 +280,25 @@ export default function App() {
                     </button>
                   );
                 })}
-              </div>
+              </nav>
             </div>
           );
         }
         return (
-          <div style={{ background: B.blue, display: "flex", alignItems: "center", padding: "0 20px", position: "sticky", top: 0, zIndex: 100 }}>
+          <nav aria-label="Sections" className="ycdi-onblue" style={{ background: B.blue, display: "flex", alignItems: "center", padding: "0 20px", position: "sticky", top: 0, zIndex: 100 }}>
             <div style={{ padding: "12px 0", marginRight: 20, paddingRight: 20, borderRight: "1px solid rgba(255,255,255,0.2)" }}>
               <YCDILogo height={38} dark={true} />
             </div>
             {TABS.map(tabBtn)}
             <div style={{ marginLeft: "auto" }}>{userBlock}</div>
-          </div>
+          </nav>
         );
       })()}
 
       <div style={{ background: B.yellow, height: 4 }} />
 
       {updateReady ? (
-        <div style={{ background: B.blueDark, color: B.white, padding: "9px 14px", fontSize: 12.5, textAlign: "center", lineHeight: 1.5, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+        <div role="status" aria-live="polite" style={{ background: B.blueDark, color: B.white, padding: "9px 14px", fontSize: 12.5, textAlign: "center", lineHeight: 1.5, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
           A newer version of the hub is ready.
           <button
             onClick={applyUpdate}
@@ -302,12 +310,12 @@ export default function App() {
       ) : null}
 
       {!online ? (
-        <div style={{ background: "#3A3A3A", color: "#fff", padding: "8px 14px", fontSize: 12, textAlign: "center", lineHeight: 1.5 }}>
+        <div role="status" aria-live="polite" style={{ background: "#3A3A3A", color: "#fff", padding: "8px 14px", fontSize: 12, textAlign: "center", lineHeight: 1.5 }}>
           You're offline. You can still read what's already loaded, but nothing will save until the connection is back.
         </div>
       ) : null}
 
-      <div style={{ padding: isMobile ? "16px 14px" : "24px", maxWidth: 980, margin: "0 auto", boxSizing: "border-box" }}>
+      <main id="ycdi-main" tabIndex={-1} style={{ padding: isMobile ? "16px 14px" : "24px", maxWidth: 980, margin: "0 auto", boxSizing: "border-box", outline: "none" }}>
         <div style={{ marginBottom: 22 }}>
           <h1 style={{ margin: 0, fontSize: isMobile ? 19 : 22, fontWeight: 700, color: B.black, fontFamily: "'Montserrat',sans-serif" }}>{pageTitle()}</h1>
           <div style={{ fontSize: 12, color: B.muted, marginTop: 3 }}>YCDI - {new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</div>
@@ -333,11 +341,11 @@ export default function App() {
             {section === "more" ? <MoreSection profile={profile} chapters={chapters} showToast={showToast} view={moreView} setView={setMoreView} /> : null}
           </Suspense>
         </ErrorBoundary>
-      </div>
+      </main>
 
-      <div style={{ background: B.black, color: "rgba(255,255,255,0.4)", padding: "14px 24px", textAlign: "center", fontSize: 11, marginTop: 40 }}>
+      <footer style={{ background: B.black, color: "rgba(255,255,255,0.4)", padding: "14px 24px", textAlign: "center", fontSize: 11, marginTop: 40 }}>
         2025 Young Christian Development Initiative (YCDI) - RaisingGodlyLeaders - ycdinigeria@gmail.com
-      </div>
+      </footer>
 
       {toast ? <Toast msg={toast.msg} type={toast.type} /> : null}
     </div>
