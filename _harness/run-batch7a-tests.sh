@@ -207,6 +207,15 @@ want "a coordinator can shortlist their own chapter's applicant" "shortlisted" \
 want "and shortlisting is not treated as a final decision" "" \
   "$(sql "select coalesce(decided_at::text,'') from volunteer_applications where id='$APP';")"
 
+# Changed by Batch 7b. Appointing is now gated on the references and the
+# interview SAF-005 3.1 requires, so this test puts them on file first.
+# Without 7b loaded these two statements fail against tables that do not
+# exist yet, which is harmless: the 7a version of decide_application does
+# not look at them and the appointment goes through either way. The gate
+# itself is tested in run-batch7b-tests.sh section C.
+as $RC "insert into reference_checks (application_id, referee_slot, referee_name, obtained_via, referee_is_church_leader) values ('$APP',1,'Pastor Sam','phone',true),('$APP',2,'Ada Nwosu','email',false);" >/dev/null 2>&1
+as $RC "insert into interview_records (application_id, panel_names, recommendation) values ('$APP', array['Rita RC','Ngozi NC'], 'appoint');" >/dev/null 2>&1
+
 as $RC "select public.decide_application('$APP','appointed','Strong interview.');" >/dev/null
 want "appointing records who decided" "Rita RC" \
   "$(sql "select p.full_name from volunteer_applications a join profiles p on p.id=a.decided_by where a.id='$APP';")"

@@ -7,6 +7,8 @@ import {
   STATUSES, statusLabel, isOpen, roleKind,
   refereesRequired, ageOn, sortForReview,
 } from "../lib/application.js";
+// BATCH7B-MARKER applications-screening-panel
+import ScreeningPanel from "./ScreeningPanel.jsx";
 
 // Applications, from the coordinator's side.
 //
@@ -354,6 +356,22 @@ function ApplicationRecord({ app, profile, showToast, today, onClose, onChanged 
         <Line label="Faith">{app.faith_statement}</Line>
         <Line label="Why YCDI">{app.motivation}</Line>
       </Card>
+
+      <Card style={{ marginBottom: 14 }}>
+        <SHead as="h3">Screening</SHead>
+        <p style={{ margin: "0 0 4px", fontSize: 12.5, color: B.muted, lineHeight: 1.65 }}>
+          Reference checks against the six questions in YCDI-SAF-005 section 3.3, and the
+          interview against the four categories in YCDI-HR-004 section 6. An appointment is
+          refused until what section 3.1 asks for is on file.
+        </p>
+      </Card>
+
+      <ScreeningPanel
+        app={app}
+        profile={profile}
+        showToast={showToast}
+        onChanged={onChanged}
+      />
 
       <Card style={{ marginBottom: 14 }}>
         <SHead as="h3">Your notes</SHead>

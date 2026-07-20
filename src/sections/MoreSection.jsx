@@ -22,6 +22,8 @@ const VolunteersSection = lazy(() => import("./VolunteersSection.jsx"));
 const AuditLogSection = lazy(() => import("./AuditLogSection.jsx"));
 // BATCH7A-MARKER more-applications
 const ApplicationsSection = lazy(() => import("./ApplicationsSection.jsx"));
+// BATCH7B-MARKER more-renewals
+const RenewalsSection = lazy(() => import("./RenewalsSection.jsx"));
 
 // Everything that lives behind the "More" tab. New features get added here
 // instead of adding another button to the top navigation, which was already
@@ -138,6 +140,20 @@ export const MORE_FEATURES = [
     roles: ["NC", "RC"],
     adminExempt: true,
     render: (props) => <ApplicationsSection {...props} />,
+  },
+  {
+    id: "renewals",
+    title: "Declaration Renewals",
+    blurb: "Who has renewed their safeguarding declaration for the year, who has not, and the 31 January deadline.",
+    icon: ICONS.shield,
+    accent: B.gold,
+    // Coordinators, the National Coordinator and the Board Safeguarding
+    // Chair. A renewal list says who is out of compliance, which is
+    // screening material like everything else in this batch, so admins
+    // are kept out here and in the database.
+    roles: ["NC", "RC"],
+    adminExempt: true,
+    render: (props) => <RenewalsSection {...props} />,
   },
   {
     id: "volunteers",
