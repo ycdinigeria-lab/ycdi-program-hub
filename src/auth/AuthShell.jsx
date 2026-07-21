@@ -21,7 +21,7 @@ export const authCard = {
 
 export const authBtn = {
   width: "100%",
-  background: B.navy,
+  background: B.brandDeep,
   color: B.white,
   border: "none",
   borderRadius: 12,
@@ -40,7 +40,7 @@ export const authLink = {
   background: "none",
   border: "none",
   padding: 0,
-  color: B.blueDark,
+  color: B.brandDeep,
   fontSize: 13,
   fontWeight: 700,
   cursor: "pointer",
@@ -56,7 +56,7 @@ function IconBox({ children, filled }) {
       style={{
         width: 44, minWidth: 44, alignSelf: "stretch",
         display: "flex", alignItems: "center", justifyContent: "center",
-        background: filled ? B.navy : "#94A6C0",
+        background: filled ? B.brandDeep : "#628C9C",
         color: B.white,
         borderRadius: "11px 0 0 11px",
       }}
@@ -95,7 +95,7 @@ export function AuthField({ label, icon, required, hint, children, id }) {
   const fieldId = id || auto;
   return (
     <div style={{ marginBottom: 14 }}>
-      <label htmlFor={fieldId} style={{ display: "block", fontSize: 13, fontWeight: 700, color: B.navy, marginBottom: 6, fontFamily: "'Montserrat',sans-serif" }}>
+      <label htmlFor={fieldId} style={{ display: "block", fontSize: 13, fontWeight: 700, color: B.brandDeep, marginBottom: 6, fontFamily: "'Montserrat',sans-serif" }}>
         {label}{required ? <span style={{ color: B.red, marginLeft: 3 }}>*</span> : null}
       </label>
       <div style={{ display: "flex", alignItems: "stretch", border: "1px solid " + B.border, borderRadius: 12, overflow: "hidden", background: B.white }}>
@@ -157,7 +157,7 @@ export function PasswordInput({ id, value, onChange, placeholder, autoComplete, 
 export function AuthNotice({ tone, children }) {
   const cfg = tone === "error"
     ? { bg: B.redLight, fg: B.red }
-    : { bg: B.blueLight, fg: B.blueDark };
+    : { bg: B.blueLight, fg: B.brandDeep };
   return (
     <div
       role={tone === "error" ? "alert" : "status"}
@@ -170,7 +170,7 @@ export function AuthNotice({ tone, children }) {
 
 export default function AuthShell({ title, subtitle, children, maxWidth }) {
   return (
-    <div style={{ minHeight: "100vh", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", padding: "30px 18px", background: B.navyDeep, fontFamily: "'Open Sans',sans-serif" }}>
+    <div style={{ minHeight: "100vh", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", padding: "30px 18px", background: B.brandDeepest, fontFamily: "'Open Sans',sans-serif" }}>
       <style>{GFONTS}</style>
 
       {/* Fixed rather than absolute so a long form scrolls over a still
@@ -180,10 +180,19 @@ export default function AuthShell({ title, subtitle, children, maxWidth }) {
         style={{ position: "fixed", inset: 0, backgroundImage: "url(" + authBg + ")", backgroundSize: "cover", backgroundPosition: "center 22%", backgroundRepeat: "no-repeat" }}
       />
       {/* Lighter at the top where the photograph should still read, heavier
-          behind the card so the type never has to fight it. */}
+          behind the card so the type never has to fight it.
+
+          BATCH11-MARKER auth-brand-wash
+
+          The three stops are one colour at three depths, all of them the
+          brand blue with its hue and saturation untouched. Top #055E80,
+          middle brandDeep, bottom brandDeepest. Reading down the screen
+          it deepens rather than shifting hue, so the wash carries YCDI
+          blue over the photograph instead of the neutral navy that was
+          here before. */}
       <div
         aria-hidden="true"
-        style={{ position: "fixed", inset: 0, background: "linear-gradient(180deg, rgba(11,42,85,0.58) 0%, rgba(11,42,85,0.80) 46%, rgba(7,29,61,0.94) 100%)" }}
+        style={{ position: "fixed", inset: 0, background: "linear-gradient(180deg, rgba(5,94,128,0.56) 0%, rgba(4,80,108,0.80) 46%, rgba(2,47,64,0.94) 100%)" }}
       />
 
       <div style={{ position: "relative", width: "100%", maxWidth: maxWidth || 420 }}>
@@ -195,7 +204,7 @@ export default function AuthShell({ title, subtitle, children, maxWidth }) {
 
         <div style={authCard}>
           {title ? (
-            <h1 style={{ margin: 0, fontSize: 23, fontWeight: 700, color: B.navy, fontFamily: "'Montserrat',sans-serif", textAlign: "center", lineHeight: 1.25 }}>
+            <h1 style={{ margin: 0, fontSize: 23, fontWeight: 700, color: B.brandDeep, fontFamily: "'Montserrat',sans-serif", textAlign: "center", lineHeight: 1.25 }}>
               {title}
             </h1>
           ) : null}

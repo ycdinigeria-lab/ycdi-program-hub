@@ -8,6 +8,9 @@ import {
   formatValue, formatVariance, statusOf, STATUS_COLOURS, TARGETABLE,
   buildBoardCsvRows, buildChapterCsvRows, toCsv, downloadCsv, csvFilename,
   yearOptions, numOrNull, volunteerGap, gapReading,
+  // BATCH11-MARKER kpi-screen-imports
+  countOrDash, chapterVolunteerRates, hasChapterVolunteers, chaptersByGap,
+  ACTIVITY_WINDOW_KEY, windowReading, windowError,
 } from "../lib/kpi.js";
 
 // The funder and Board KPI report.
@@ -49,7 +52,7 @@ function Note({ children }) {
 // halfway down a table.
 //
 // BATCH7C-MARKER kpi-screen-gap
-function VolunteerGapPanel({ rows }) {
+export function VolunteerGapPanel({ rows }) {
   const g = volunteerGap(rows);
   if (!g) return null;
   const tone = g.band === "wide"
@@ -90,7 +93,7 @@ function VolunteerGapPanel({ rows }) {
 // ---------------------------------------------------------------
 // The Board table
 // ---------------------------------------------------------------
-function BoardRowsDesktop({ rows }) {
+export function BoardRowsDesktop({ rows }) {
   const { kpis, secondary } = splitRows(rows);
   const th = {
     textAlign: "left", padding: "9px 10px", fontSize: 11,
@@ -172,7 +175,7 @@ function BoardRowsDesktop({ rows }) {
   );
 }
 
-function BoardRowsMobile({ rows }) {
+export function BoardRowsMobile({ rows }) {
   const { kpis, secondary } = splitRows(rows);
   const cell = { fontSize: 12, color: B.muted };
   const val = { fontSize: 13, fontWeight: 700, color: B.black };
@@ -231,7 +234,7 @@ function BoardRowsMobile({ rows }) {
 // ---------------------------------------------------------------
 // Chapter breakdown
 // ---------------------------------------------------------------
-function ChapterTable({ rows }) {
+export function ChapterTable({ rows }) {
   const th = {
     textAlign: "right", padding: "9px 8px", fontSize: 10.5,
     fontFamily: "'Montserrat',sans-serif", fontWeight: 700, color: B.muted,
@@ -278,6 +281,201 @@ function ChapterTable({ rows }) {
         Attendance counts seats and is always the larger of the two. They are different
         things and only the first belongs in a funder report.
       </Note>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------
+// Chapter volunteer figures
+// ---------------------------------------------------------------
+//
+// BATCH11-MARKER kpi-screen-chapter-volunteers
+//
+// Kept as its own table rather than three more columns bolted onto the
+// programme one. Eleven columns on a phone is not a table, it is a
+// horizontal scroll nobody reaches the end of, and these figures answer
+// a different question from the ones next to them.
+//
+// The gap column is the point of the whole thing. The panel on the Board
+// tab tells the reader to check chapter by chapter; this is where that
+// check happens, sorted widest first.
+export function ChapterVolunteerTable({ rows }) {
+  const th = {
+    textAlign: "right", padding: "9px 8px", fontSize: 10.5,
+    fontFamily: "'Montserrat',sans-serif", fontWeight: 700, color: B.muted,
+    borderBottom: `2px solid ${B.border}`, whiteSpace: "nowrap",
+  };
+  const td = { padding: "10px 8px", fontSize: 12.5, textAlign: "right", borderBottom: `1px solid ${B.border}` };
+
+  if (!hasChapterVolunteers(rows)) {
+    return (
+      <div style={{ marginTop: 26 }}>
+        <SHead color={B.muted}>Volunteers by chapter</SHead>
+        <p style={{ fontSize: 12.5, color: B.muted, lineHeight: 1.6, margin: 0 }}>
+          Volunteer figures are limited to coordinators and admins, so they are left
+          out here rather than shown as zero. The programme figures above are unaffected.
+        </p>
+      </div>
+    );
+  }
+
+  const ranked = chaptersByGap(rows);
+  const widest = ranked.length ? ranked[0] : null;
+  const tone = (band) => band === "wide"
+    ? { bg: "#FDEAED", text: "#8b0a1c" }
+    : band === "widening"
+      ? { bg: "#FFFDE6", text: "#7a5c00" }
+      : { bg: "#E8F5E9", text: "#1a6b2f" };
+
+  return (
+    <div style={{ marginTop: 26 }}>
+      <SHead color={B.blue}>Volunteers by chapter</SHead>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
+          <thead>
+            <tr>
+              <th style={{ ...th, textAlign: "left" }}>Chapter</th>
+              <th style={th}>On the books</th>
+              <th style={th}>Active on register</th>
+              <th style={th}>Seen in recorded work</th>
+              <th style={th}>Register</th>
+              <th style={th}>Observed</th>
+              <th style={th}>Gap</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(rows || []).map((c) => {
+              const r = chapterVolunteerRates(c);
+              return (
+                <tr key={c.chapter_id}>
+                  <td style={{ ...td, textAlign: "left", fontWeight: 600 }}>{c.chapter_name}</td>
+                  <td style={{ ...td, fontWeight: 700 }}>{countOrDash(c.volunteer_on_books)}</td>
+                  <td style={td}>{countOrDash(c.volunteer_active)}</td>
+                  <td style={td}>{countOrDash(c.volunteer_involved)}</td>
+                  <td style={td}>{r ? `${r.register}%` : "—"}</td>
+                  <td style={td}>{r ? `${r.observed}%` : "—"}</td>
+                  <td style={{ ...td, fontWeight: 700, color: r ? tone(r.band).text : B.muted }}>
+                    {r ? `${r.gap} pts` : "—"}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {widest ? (
+        <p style={{
+          margin: "12px 0 0", fontSize: 12, lineHeight: 1.6,
+          background: tone(widest.rates.band).bg, color: tone(widest.rates.band).text,
+          padding: "9px 12px", borderRadius: 8,
+        }}>
+          {ranked.length === 1
+            ? `${widest.chapter.chapter_name} is the only chapter with volunteers on the books in this period, so the national gap is that chapter's gap.`
+            : `${widest.chapter.chapter_name} carries the widest gap at ${widest.rates.gap} points. If that is well ahead of the rest, the register problem is local to one chapter rather than national.`}
+        </p>
+      ) : null}
+      <Note>
+        On the books is everyone whose volunteer record overlapped the period, excluding
+        anyone still onboarding. Register counts the ones marked active. Observed counts
+        the ones who recorded attendance, moved a participant stage, or held an open
+        mentoring link. A dash means the figure is not shown to you, which is not the
+        same as nobody being there.
+      </Note>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------
+// The activity window
+// ---------------------------------------------------------------
+//
+// BATCH11-MARKER kpi-screen-window
+//
+// One row in kpi_settings, editable by the people the policy already
+// lets edit it. Shown only to them, because a control that greys itself
+// out and refuses to save is worse than an absent one.
+//
+// The wording under it is not decoration. The observed figure means a
+// different thing depending on this setting, and somebody changing it
+// six months from now will not have read Batch 7c.
+export function ActivityWindowControl({ value, canEdit, saving, onSave }) {
+  const [mode, setMode] = useState(numOrNull(value) === null ? "whole" : "days");
+  const [days, setDays] = useState(numOrNull(value) === null ? "" : String(value));
+
+  useEffect(() => {
+    setMode(numOrNull(value) === null ? "whole" : "days");
+    setDays(numOrNull(value) === null ? "" : String(value));
+  }, [value]);
+
+  if (!canEdit) return null;
+
+  const err = mode === "days" ? windowError(days) : "";
+  const pending = mode === "whole" ? null : numOrNull(days);
+  const dirty = pending !== numOrNull(value);
+
+  return (
+    <div style={{
+      border: `1px solid ${B.border}`, borderRadius: 10, padding: "14px 16px",
+      marginBottom: 20, background: B.white,
+    }}>
+      <SHead color={B.blue}>What the observed figure measures</SHead>
+
+      <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12.5, cursor: "pointer" }}>
+          <input
+            type="radio"
+            name="activity-window"
+            checked={mode === "whole"}
+            onChange={() => setMode("whole")}
+          />
+          The whole reporting period
+        </label>
+        <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12.5, cursor: "pointer" }}>
+          <input
+            type="radio"
+            name="activity-window"
+            checked={mode === "days"}
+            onChange={() => setMode("days")}
+          />
+          The last
+          <input
+            style={{ ...inp, width: 76, padding: "6px 8px", fontSize: 12, textAlign: "right" }}
+            value={days}
+            inputMode="numeric"
+            aria-label="Number of days in the activity window"
+            onFocus={() => setMode("days")}
+            onChange={(e) => setDays(e.target.value)}
+          />
+          days
+        </label>
+      </div>
+
+      {err ? (
+        <p style={{ margin: "10px 0 0", fontSize: 12, color: B.red }}>{err}</p>
+      ) : (
+        <p style={{ margin: "10px 0 0", fontSize: 12, color: B.muted, lineHeight: 1.6 }}>
+          {windowReading(pending)}
+        </p>
+      )}
+
+      <p style={{ margin: "8px 0 0", fontSize: 11.5, color: B.muted, lineHeight: 1.6 }}>
+        Attendance is stored once per volunteer per programme, dated the first time. A short
+        window will therefore drop people who are still serving weekly, so treat a low
+        observed figure under a short window as a question rather than an answer.
+      </p>
+
+      <button
+        style={{ ...btnP, marginTop: 14 }}
+        disabled={saving || !!err || !dirty}
+        onClick={() => onSave(pending)}
+      >
+        {saving ? "Saving\u2026" : "Save the activity window"}
+      </button>
+      {dirty ? (
+        <span style={{ fontSize: 11.5, color: B.muted, marginLeft: 10 }}>
+          Not saved yet. The figures above will not move until you do.
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -426,6 +624,9 @@ export default function KpiReportSection({ profile, chapters: allChapters, showT
   const [snapY, setSnapY] = useState([]);
   const [targets, setTargets] = useState([]);
   const [chapters, setChapters] = useState([]);
+  // BATCH11-MARKER kpi-screen-window-state
+  const [windowDays, setWindowDays] = useState(null);
+  const [savingWindow, setSavingWindow] = useState(false);
 
   const canEditTargets = profile?.role === "NC" || !!profile?.is_admin;
   const qr = quarterRange(year, quarter);
@@ -440,13 +641,14 @@ export default function KpiReportSection({ profile, chapters: allChapters, showT
     // Four separate calls rather than one joined query. A joined Supabase
     // query across these was silently emptied by row security earlier in
     // this project, and separate calls are both clearer and safer.
-    const [rq, ry, rt, rc] = await Promise.all([
+    const [rq, ry, rt, rc, rw] = await Promise.all([
       supabase.rpc("kpi_snapshot", { p_from: a.from, p_to: a.to }),
       supabase.rpc("kpi_snapshot", { p_from: b.from, p_to: b.to }),
       supabase.from("kpi_targets").select("*").eq("financial_year", year),
       supabase.rpc("kpi_chapter_breakdown", { p_from: b.from, p_to: b.to }),
+      supabase.from("kpi_settings").select("key,int_value").eq("key", ACTIVITY_WINDOW_KEY),
     ]);
-    const bad = [rq, ry, rt, rc].find((r) => r.error);
+    const bad = [rq, ry, rt, rc, rw].find((r) => r.error);
     if (bad) {
       setErr(bad.error.message || "Could not load the KPI figures.");
       setLoading(false);
@@ -456,6 +658,7 @@ export default function KpiReportSection({ profile, chapters: allChapters, showT
     setSnapY(ry.data || []);
     setTargets(rt.data || []);
     setChapters(rc.data || []);
+    setWindowDays(numOrNull((rw.data || [])[0] && (rw.data || [])[0].int_value));
     setLoading(false);
   }, [year, quarter]);
 
@@ -475,6 +678,32 @@ export default function KpiReportSection({ profile, chapters: allChapters, showT
   const scope = seesAll
     ? "All chapters"
     : ownChapter ? `${ownChapter.name} chapter only` : "Your chapter only";
+
+  // The row is seeded by Batch 7c, so this is an update in practice. It
+  // is written as an upsert anyway, because a hub with the SQL run but
+  // the seed row somehow missing should still be fixable from the screen
+  // rather than needing another trip to the SQL editor.
+  async function saveWindow(days) {
+    setSavingWindow(true);
+    const { error } = await supabase
+      .from("kpi_settings")
+      .upsert(
+        { key: ACTIVITY_WINDOW_KEY, int_value: days, updated_at: new Date().toISOString() },
+        { onConflict: "key" }
+      );
+    setSavingWindow(false);
+    if (error) {
+      showToast?.(`Could not save the activity window: ${error.message}`, "error");
+      return;
+    }
+    showToast?.(
+      days === null
+        ? "The observed figure now covers the whole reporting period."
+        : `The observed figure now covers the last ${days} days of the period.`,
+      "success"
+    );
+    load();
+  }
 
   function exportBoard() {
     const meta = {
@@ -567,6 +796,12 @@ export default function KpiReportSection({ profile, chapters: allChapters, showT
           {tab === "board" ? (
             <>
               <VolunteerGapPanel rows={rows} />
+              <ActivityWindowControl
+                value={windowDays}
+                canEdit={canEditTargets}
+                saving={savingWindow}
+                onSave={saveWindow}
+              />
               {isMobile ? <BoardRowsMobile rows={rows} /> : <BoardRowsDesktop rows={rows} />}
               <button style={{ ...btnG, marginTop: 18 }} onClick={exportBoard}>
                 Download the Board table (CSV)
@@ -577,6 +812,7 @@ export default function KpiReportSection({ profile, chapters: allChapters, showT
           {tab === "chapters" ? (
             <>
               <ChapterTable rows={chapters} />
+              <ChapterVolunteerTable rows={chapters} />
               <button style={{ ...btnG, marginTop: 18 }} onClick={exportChapters}>
                 Download the chapter breakdown (CSV)
               </button>

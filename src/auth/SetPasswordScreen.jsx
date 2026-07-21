@@ -2,7 +2,7 @@ import { useState } from "react";
 import { supabase } from "../lib/supabase.js";
 import { B, inp, btnP } from "../theme.js";
 // BATCH9-MARKER setpassword-shell
-import AuthShell from "./AuthShell.jsx";
+import AuthShell, { authBtn } from "./AuthShell.jsx";
 import { Card, SHead, Field } from "../components/ui.jsx";
 import { clearAuthCallbackFromUrl } from "../lib/authCallback.js";
 import { humanise } from "../lib/errors.js";
@@ -87,10 +87,21 @@ export default function SetPasswordScreen({ recovery, email, onDone, onCancel, s
         </div>
       ) : null}
 
+      {/* BATCH11-MARKER reset-button-brand
+
+          The signed-out reset screen used btnP, which is the brand blue
+          at #09ADEA carrying white type. That is 2.6:1 and unreadable in
+          sunlight, and it also made this screen the odd one out beside
+          sign in and create an account, which both use authBtn. On the
+          reset link it now matches them. Opened from inside the hub it
+          stays btnP, because that is what every other button in the app
+          looks like and this is not the batch to change all of them. */}
       <button
         type="submit"
         disabled={busy}
-        style={{ ...btnP, width: "100%", textAlign: "center", opacity: busy ? 0.6 : 1, fontSize: 14, padding: 12 }}
+        style={recovery
+          ? { ...authBtn, opacity: busy ? 0.6 : 1 }
+          : { ...btnP, width: "100%", textAlign: "center", opacity: busy ? 0.6 : 1, fontSize: 14, padding: 12 }}
       >
         {busy ? "Saving…" : recovery ? "Save and continue" : "Change password"}
       </button>

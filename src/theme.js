@@ -9,13 +9,22 @@ export const B = {
   muted: "#5a5a5a", border: "#DCDCDC",
   purple: "#5B2D8E", purpleLight: "#F0E8FA",
   gold: "#BA7517", green: "#1a5c38",
-  // BATCH9-MARKER navy
+  // BATCH11-MARKER brand-deep
   //
-  // The signed-out screens sit on a deep navy rather than on #09ADEA. It is
-  // not a new brand colour and nothing inside the app uses it. It is a dark
-  // surface for a photograph and white type to sit on, which the brand blue
-  // is too light to do. Everything inside the white card stays brand.
-  navy: "#0B2A55", navyDeep: "#071D3D",
+  // The signed-out screens used to sit on a navy that was openly not a
+  // brand colour, chosen in Batch 9 because #09ADEA is far too light to
+  // carry white type. That reasoning still holds, so the fix is not to
+  // use the brand blue as it is. These two are the brand blue itself,
+  // hue 196 and saturation 93 held exactly, taken down in lightness
+  // until white type sits on them properly. Same colour, less light.
+  //
+  //   brandDeep     white on it 8.9:1, and 8.9:1 as type on white
+  //   brandDeepest  white on it 14.2:1, the surface behind the photograph
+  //
+  // Both were measured rather than judged by eye. #09ADEA as type on
+  // white is 2.6:1 and #0789BB is 4.0:1, which is why neither is used
+  // for words anywhere on these screens even though both are brand.
+  brandDeep: "#04506C", brandDeepest: "#022F40",
 };
 
 export const GFONTS = "@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Open+Sans:wght@400;600&display=swap');";

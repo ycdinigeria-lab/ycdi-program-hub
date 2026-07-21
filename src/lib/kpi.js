@@ -239,6 +239,100 @@ export function gapReading(g) {
   return "The register and the record of work broadly agree, which is the reassuring case.";
 }
 
+// ---------------------------------------------------------------
+// The chapter breakdown's volunteer columns, added in Batch 11
+// ---------------------------------------------------------------
+//
+// BATCH11-MARKER kpi-lib-chapter-volunteers
+//
+// gapReading tells a reader in the middle band that a chapter by chapter
+// check would show whether the problem is one chapter or all of them.
+// Until this batch there was nothing on the Chapters tab to check, which
+// made that sentence a promise the screen could not keep.
+//
+// Three columns come back from kpi_chapter_breakdown now. They are null
+// rather than zero for anyone the volunteer rule does not permit, so
+// "not allowed to see this" and "this chapter has no volunteers" stay
+// tellable apart all the way to the screen and the CSV.
+
+// A chapter cell that must never turn a blank into a zero.
+export function countOrDash(v) {
+  const n = numOrNull(v);
+  return n === null ? "—" : n.toLocaleString();
+}
+
+// The same two readings the panel above the Board table shows, worked
+// out for one chapter. Returns null when the figures are withheld, and
+// also when the chapter has nobody on the books, because a rate out of
+// zero is not a small number, it is not a number at all.
+export function chapterVolunteerRates(c) {
+  const onBooks = numOrNull(c && c.volunteer_on_books);
+  const active = numOrNull(c && c.volunteer_active);
+  const involved = numOrNull(c && c.volunteer_involved);
+  if (onBooks === null || active === null || involved === null) return null;
+  if (onBooks === 0) return null;
+  const register = Math.round(((100 * active) / onBooks) * 10) / 10;
+  const observed = Math.round(((100 * involved) / onBooks) * 10) / 10;
+  const gap = Math.round((register - observed) * 10) / 10;
+  let band = "close";
+  if (gap > GAP_BANDS.widening) band = "wide";
+  else if (gap > GAP_BANDS.close) band = "widening";
+  return { onBooks, active, involved, register, observed, gap, band };
+}
+
+// Whether there is anything worth drawing a volunteer table for. A Team
+// Member gets three nulls on every row, and an empty table under a
+// header would suggest the chapters have no volunteers.
+export function hasChapterVolunteers(breakdown) {
+  return (breakdown || []).some((c) => numOrNull(c && c.volunteer_on_books) !== null);
+}
+
+// Which chapter is carrying the national gap. Sorted widest first,
+// because that is the order somebody reads them in when they are trying
+// to work out where to start.
+export function chaptersByGap(breakdown) {
+  return (breakdown || [])
+    .map((c) => ({ chapter: c, rates: chapterVolunteerRates(c) }))
+    .filter((x) => x.rates !== null)
+    .sort((a, b) => b.rates.gap - a.rates.gap);
+}
+
+// ---------------------------------------------------------------
+// The activity window, added in Batch 11
+// ---------------------------------------------------------------
+//
+// BATCH11-MARKER kpi-lib-window
+//
+// One row in kpi_settings decides what the observed figure measures. It
+// has been settable since Batch 7c and only from the SQL editor, which
+// in practice meant not settable.
+
+export const ACTIVITY_WINDOW_KEY = "volunteer_activity_window_days";
+export const WINDOW_MAX = 3650;
+
+// Says what the choice does, in the words somebody would use out loud.
+// The whole reason for putting this on screen is that the observed
+// figure changes meaning depending on the answer, and a number whose
+// meaning is buried in a settings table is worse than no setting.
+export function windowReading(days) {
+  const n = numOrNull(days);
+  if (n === null) {
+    return "The observed figure counts anyone who recorded work at any point in the reporting period. That is what an annual funder return asks for: did this person serve this year, yes or no.";
+  }
+  return `The observed figure counts only work recorded in the last ${n} days of the reporting period. Anything earlier stops counting, so the figure will be lower than the whole-period one and reads as recency rather than as whether somebody served at all. It never reaches outside the period being reported.`;
+}
+
+// An empty box means the whole period, which is a real answer and not an
+// error. Everything else has to be a whole number of days.
+export function windowError(v) {
+  const n = numOrNull(v);
+  if (n === null) return "Type a number of days, or choose the whole reporting period instead.";
+  if (!Number.isInteger(n)) return "Days has to be a whole number.";
+  if (n < 1) return "Days has to be at least 1.";
+  if (n > WINDOW_MAX) return `Days has to be ${WINDOW_MAX} or fewer.`;
+  return "";
+}
+
 // Joins the two snapshots and the targets into the rows Template 2 wants.
 // snapQ and snapYtd are whatever kpi_snapshot returned for the quarter and
 // for the year to date. targets is the kpi_targets rows for that year.
@@ -352,8 +446,14 @@ export function buildChapterCsvRows(breakdown) {
   const out = [["CHAPTER BREAKDOWN"]];
   out.push(["Chapter", "Activities", "Schools", "Beneficiaries (deduplicated)",
             "Attendance recorded (NOT deduplicated)", "Forms returned",
-            "Positive replies", "Satisfaction", "Budget", "Spent"]);
+            "Positive replies", "Satisfaction", "Budget", "Spent",
+            // BATCH11-MARKER chapter-csv-volunteers
+            "Volunteers on books", "Active on register", "Seen in recorded work",
+            "Active on register %", "Seen in recorded work %", "Gap (pts)"]);
   (breakdown || []).forEach((c) => {
+    // A dash rather than a zero where the figures are withheld. Somebody
+    // opening this in Excel next March has no way of asking which it was.
+    const r = chapterVolunteerRates(c);
     out.push([
       c.chapter_name,
       c.activities ?? 0,
@@ -366,6 +466,12 @@ export function buildChapterCsvRows(breakdown) {
         ? "—" : `${c.satisfaction_pct}%`,
       c.budget ?? 0,
       c.spent ?? 0,
+      countOrDash(c.volunteer_on_books),
+      countOrDash(c.volunteer_active),
+      countOrDash(c.volunteer_involved),
+      r ? `${r.register}%` : "—",
+      r ? `${r.observed}%` : "—",
+      r ? r.gap : "—",
     ]);
   });
   return out;

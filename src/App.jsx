@@ -161,7 +161,7 @@ export default function App() {
   // BATCH9-MARKER splash
   if (loading) {
     return (
-      <div role="status" aria-live="polite" aria-label="Loading the hub" style={{ minHeight: "100vh", background: B.navyDeep, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div role="status" aria-live="polite" aria-label="Loading the hub" style={{ minHeight: "100vh", background: B.brandDeepest, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <style>{GFONTS}</style>
         <YCDILogo height={62} dark markOnly />
       </div>
