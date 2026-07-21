@@ -173,6 +173,72 @@ export function formatVariance(v, unit) {
   return `${sign}${n.toLocaleString()}`;
 }
 
+// ---------------------------------------------------------------
+// The volunteer lines, added in Batch 7c
+// ---------------------------------------------------------------
+//
+// BATCH7C-MARKER kpi-lib-volunteers
+//
+// Retention measured over three months is not the same quantity as
+// retention measured over a year, and the target it would be sitting
+// next to was written for a year. Of the people serving on 1 January,
+// nearly all of them are still serving on 31 March, so a Q1 figure of
+// 96% would land in the Board pack beside a target of 60 and read as
+// runaway success. It is not success, it is a shorter question.
+//
+// So these two lines report year to date only, and the quarter columns
+// are left blank on purpose. A blank cell prompts somebody to ask. A
+// wrong number does not.
+export const YEAR_TO_DATE_ONLY = ["volunteer_retention", "volunteer_retention_new"];
+
+// The register says a volunteer is active. The record of work says
+// whether anybody saw them. These are the two lines that answer the
+// same question from opposite ends.
+export const ACTIVE_RATE_REGISTER = "volunteer_active_rate";
+export const ACTIVE_RATE_OBSERVED = "volunteer_active_rate_observed";
+
+// Where a gap stops being ordinary and starts being worth a
+// conversation. These are judgement, not arithmetic, and they are
+// named here so somebody can disagree with them in one place rather
+// than hunting through a component. Attendance is stored once per
+// volunteer per programme, so some gap is expected even when the
+// register is perfectly maintained.
+export const GAP_BANDS = { close: 15, widening: 35 };
+
+// Both figures and the distance between them. Returns null rather than
+// a half-answer if either line is missing or blank, because "the gap is
+// 77.8" would be worse than saying nothing.
+export function volunteerGap(rows) {
+  const byKey = {};
+  (rows || []).forEach((r) => { if (r && r.kpi_key) byKey[r.kpi_key] = r; });
+  const reg = byKey[ACTIVE_RATE_REGISTER];
+  const obs = byKey[ACTIVE_RATE_OBSERVED];
+  if (!reg || !obs) return null;
+  const register = numOrNull(reg.ytdActual !== undefined ? reg.ytdActual : reg.value);
+  const observed = numOrNull(obs.ytdActual !== undefined ? obs.ytdActual : obs.value);
+  if (register === null || observed === null) return null;
+  const gap = Math.round((register - observed) * 10) / 10;
+  let band = "close";
+  if (gap > GAP_BANDS.widening) band = "wide";
+  else if (gap > GAP_BANDS.close) band = "widening";
+  return { register, observed, gap, band };
+}
+
+// What the gap actually means, in words somebody can put in a Board
+// paper without rewriting it. Deliberately does not say the volunteers
+// stopped working, because that is the one reading the gap does not
+// support on its own.
+export function gapReading(g) {
+  if (!g) return "";
+  if (g.band === "wide") {
+    return "The register and the record of work disagree sharply. The most likely reason is that the register has not been kept up, not that the work stopped. Worth a look before this figure goes to a funder.";
+  }
+  if (g.band === "widening") {
+    return "There is a noticeable distance between what the register says and what was recorded. Some of that is expected, since attendance is stored once per volunteer per programme. A chapter by chapter check would show whether it is one chapter or all of them.";
+  }
+  return "The register and the record of work broadly agree, which is the reassuring case.";
+}
+
 // Joins the two snapshots and the targets into the rows Template 2 wants.
 // snapQ and snapYtd are whatever kpi_snapshot returned for the quarter and
 // for the year to date. targets is the kpi_targets rows for that year.
@@ -186,9 +252,12 @@ export function buildBoardRows(snapQ, snapYtd, targets, quarter) {
     const secondary = r.status === "secondary";
     const t = secondary ? null : (tgtBy[r.kpi_key] || null);
     const y = ytdBy[r.kpi_key] || {};
-    const qT = quarterTarget(t, quarter, r.unit);
+    const ytdOnly = YEAR_TO_DATE_ONLY.includes(r.kpi_key);
+    const qT = ytdOnly ? null : quarterTarget(t, quarter, r.unit);
     const yT = ytdTarget(t, quarter, r.unit);
-    const qA = r.status === "not_captured" ? null : numOrNull(r.value);
+    // A quarter figure is withheld for the retention lines rather than
+    // shown and caveated. See YEAR_TO_DATE_ONLY above.
+    const qA = (ytdOnly || r.status === "not_captured") ? null : numOrNull(r.value);
     const yA = r.status === "not_captured" ? null : numOrNull(y.value);
     return {
       kpi_key: r.kpi_key,
@@ -205,6 +274,7 @@ export function buildBoardRows(snapQ, snapYtd, targets, quarter) {
       variance: variance(yA, yT),
       status: statusOf(r.kpi_key, r.status, yA, yT),
       secondary,
+      ytdOnly,
     };
   });
 }

@@ -207,15 +207,28 @@ want "utilisation is flagged partial, never presented as the full rate" "partial
 
 echo
 echo "-- The gaps are declared, not invented -----------------"
-want "exactly three KPIs come back not_captured" "3" \
+
+# Batch 7c turns the two volunteer placeholders into real figures and
+# takes the snapshot from thirteen lines to sixteen. Both states are
+# correct, depending on what was loaded, so the expected numbers are
+# read off the database rather than written down. Hard-coding thirteen
+# here would mean this suite could only ever be run one way.
+if [ "$(sql "select count(*) from pg_proc where proname='volunteers_on_books';")" = "1" ]; then
+  LINES=16; UNCAPTURED=1; VOLSTATUS=computed
+else
+  LINES=13; UNCAPTURED=3; VOLSTATUS=not_captured
+fi
+want "the KPIs that come back not_captured" "$UNCAPTURED" \
      "$(as "$NC" "select count(*) from kpi_snapshot('$Q1F','$Q1T') where status='not_captured';")"
 want "every not_captured line has a null value" "0" \
      "$(as "$NC" "select count(*) from kpi_snapshot('$Q1F','$Q1T') where status='not_captured' and value is not null;")"
-want "volunteer active rate is one of them" "not_captured" \
+want "the annual report is declared rather than guessed at" "not_captured" \
+     "$(as "$NC" "select status from kpi_snapshot('$Q1F','$Q1T') where kpi_key='annual_report_published';")"
+want "volunteer active rate matches what has been loaded" "$VOLSTATUS" \
      "$(as "$NC" "select status from kpi_snapshot('$Q1F','$Q1T') where kpi_key='volunteer_active_rate';")"
-want "volunteer retention is another" "not_captured" \
+want "volunteer retention likewise" "$VOLSTATUS" \
      "$(as "$NC" "select status from kpi_snapshot('$Q1F','$Q1T') where kpi_key='volunteer_retention';")"
-want "the snapshot returns all thirteen lines" "13" \
+want "the snapshot returns every line it should" "$LINES" \
      "$(as "$NC" "select count(*) from kpi_snapshot('$Q1F','$Q1T');")"
 want "every line carries a note explaining itself" "0" \
      "$(as "$NC" "select count(*) from kpi_snapshot('$Q1F','$Q1T') where coalesce(note,'')='';")"

@@ -152,9 +152,20 @@ want "team member sees only their own chapter's schools" "2" "$(vt schools_reach
 
 echo
 echo "-- Nothing was widened by accident --------------------"
-want "the snapshot still returns all thirteen lines for the RC" "13" \
+
+# Batch 7c turns the two volunteer placeholders into real figures and
+# takes the snapshot from thirteen lines to sixteen. Both states are
+# correct, depending on what was loaded, so the expected numbers are
+# read off the database rather than written down. Hard-coding thirteen
+# here would mean this suite could only ever be run one way.
+if [ "$(sql "select count(*) from pg_proc where proname='volunteers_on_books';")" = "1" ]; then
+  LINES=16; UNCAPTURED=1; VOLSTATUS=computed
+else
+  LINES=13; UNCAPTURED=3; VOLSTATUS=not_captured
+fi
+want "the snapshot returns the RC the same number of lines as anyone else" "$LINES" \
      "$(as "$RC" "select count(*) from kpi_snapshot('$F','$T');")"
-want "three KPIs are still declared not captured for the RC" "3" \
+want "and declares the same gaps to them" "$UNCAPTURED" \
      "$(as "$RC" "select count(*) from kpi_snapshot('$F','$T') where status='not_captured';")"
 want "no not_captured line gained a value" "0" \
      "$(as "$RC" "select count(*) from kpi_snapshot('$F','$T') where status='not_captured' and value is not null;")"

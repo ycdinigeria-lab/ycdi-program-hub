@@ -7,7 +7,7 @@ import {
   QUARTERS, quarterRange, ytdRange, quarterOfDate, buildBoardRows, splitRows,
   formatValue, formatVariance, statusOf, STATUS_COLOURS, TARGETABLE,
   buildBoardCsvRows, buildChapterCsvRows, toCsv, downloadCsv, csvFilename,
-  yearOptions, numOrNull,
+  yearOptions, numOrNull, volunteerGap, gapReading,
 } from "../lib/kpi.js";
 
 // The funder and Board KPI report.
@@ -40,6 +40,50 @@ function Note({ children }) {
     <p style={{ margin: "5px 0 0", fontSize: 11.5, color: B.muted, lineHeight: 1.5 }}>
       {children}
     </p>
+  );
+}
+
+// The two active rate lines answer the same question from opposite
+// ends, and the distance between them is the part worth reading. Put
+// side by side rather than left for somebody to subtract in their head
+// halfway down a table.
+//
+// BATCH7C-MARKER kpi-screen-gap
+function VolunteerGapPanel({ rows }) {
+  const g = volunteerGap(rows);
+  if (!g) return null;
+  const tone = g.band === "wide"
+    ? { bg: "#FDEAED", text: "#8b0a1c" }
+    : g.band === "widening"
+      ? { bg: "#FFFDE6", text: "#7a5c00" }
+      : { bg: "#E8F5E9", text: "#1a6b2f" };
+  const fig = { fontFamily: "'Montserrat',sans-serif", fontWeight: 700, fontSize: 22, color: B.black };
+  const cap = { fontSize: 11, color: B.muted, marginTop: 2 };
+  return (
+    <div style={{
+      border: `1px solid ${B.border}`, borderRadius: 10, padding: "14px 16px",
+      marginBottom: 20, background: B.white,
+    }}>
+      <SHead color={B.blue}>Volunteer activity, both readings</SHead>
+      <div style={{ display: "flex", gap: 26, flexWrap: "wrap", alignItems: "flex-start" }}>
+        <div>
+          <div style={fig}>{g.register}%</div>
+          <div style={cap}>marked active on the register</div>
+        </div>
+        <div>
+          <div style={fig}>{g.observed}%</div>
+          <div style={cap}>seen in recorded work</div>
+        </div>
+        <div>
+          <div style={{ ...fig, color: tone.text }}>{g.gap} pts</div>
+          <div style={cap}>the distance between them</div>
+        </div>
+      </div>
+      <p style={{
+        margin: "12px 0 0", fontSize: 12, lineHeight: 1.6,
+        background: tone.bg, color: tone.text, padding: "9px 12px", borderRadius: 8,
+      }}>{gapReading(g)}</p>
+    </div>
   );
 }
 
@@ -79,6 +123,13 @@ function BoardRowsDesktop({ rows }) {
               <td style={{ ...td, maxWidth: 300 }}>
                 <div style={{ fontWeight: 600, color: B.black }}>{r.label}</div>
                 <Note>{r.note}</Note>
+                {r.ytdOnly ? (
+                  <Note>
+                    Reported year to date only. Retention over three months is a
+                    much easier test than retention over a year, and putting one
+                    beside a target written for the other would flatter it.
+                  </Note>
+                ) : null}
               </td>
               <td style={num}>{formatValue(r.qTarget, r.unit)}</td>
               <td style={num}>{formatValue(r.qActual, r.unit)}</td>
@@ -158,6 +209,9 @@ function BoardRowsMobile({ rows }) {
         )}
       </div>
       <Note>{r.note}</Note>
+      {r.ytdOnly ? (
+        <Note>Reported year to date only, so the quarter figures are left blank.</Note>
+      ) : null}
     </div>
   );
 
@@ -455,8 +509,9 @@ export default function KpiReportSection({ profile, chapters: allChapters, showT
         <SHead color={B.blue}>Board and funder KPI report</SHead>
         <p style={{ fontSize: 12.5, color: B.muted, lineHeight: 1.6, marginTop: 0 }}>
           Section A of the Quarterly NEC Report to Board, YCDI-PROG-003 Template 2, filled in
-          from what the hub actually holds. Three of the ten KPIs are marked not captured
-          rather than estimated. Nothing on this page is a guess.
+          from what the hub actually holds. Volunteer active rate and retention are now
+          worked out from the register rather than left blank. One line, the annual report,
+          is still marked not captured rather than estimated. Nothing on this page is a guess.
         </p>
         {seesAll ? null : (
           <p style={{
@@ -511,6 +566,7 @@ export default function KpiReportSection({ profile, chapters: allChapters, showT
         <Card>
           {tab === "board" ? (
             <>
+              <VolunteerGapPanel rows={rows} />
               {isMobile ? <BoardRowsMobile rows={rows} /> : <BoardRowsDesktop rows={rows} />}
               <button style={{ ...btnG, marginTop: 18 }} onClick={exportBoard}>
                 Download the Board table (CSV)
