@@ -25,6 +25,8 @@ const ApplyScreen = lazy(() => import("./public/ApplyScreen.jsx"));
 // people use two or three of these, so the rest is never fetched at all.
 // MoreSection itself stays here because it is small and it holds the list
 // of feature names the page title reads from.
+// BATCH8-MARKER app-dashboard
+const DashboardSection = lazy(() => import("./sections/DashboardSection.jsx"));
 const SpiritualSection = lazy(() => import("./sections/SpiritualSection.jsx"));
 const ProgrammesSection = lazy(() => import("./sections/programmes/ProgrammesSection.jsx"));
 const PrayerManualSection = lazy(() => import("./sections/PrayerManualSection.jsx"));
@@ -43,7 +45,11 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [section, setSection] = useState("programmes");
+  const [section, setSection] = useState("home");
+  // BATCH8-MARKER app-dashboard
+  // Set when the dashboard asks for one programme by name. Programme
+  // Operations reads it once, opens that record, then clears it.
+  const [openProgramId, setOpenProgramId] = useState(null);
   const [moreView, setMoreView] = useState(null);
   const [toast, setToast] = useState(null);
   const [updateReady, setUpdateReady] = useState(false);
@@ -63,7 +69,24 @@ export default function App() {
   // always lands on the list of features rather than mid-way into one.
   function goToSection(id) {
     if (id !== "more") setMoreView(null);
+    if (id !== "programmes") setOpenProgramId(null);
     setSection(id);
+  }
+
+  // BATCH8-MARKER app-dashboard
+  // The dashboard's Review buttons. Both land somewhere real rather than
+  // just switching tab and leaving the person to find the record again.
+  function openProgramFromDashboard(id) {
+    setOpenProgramId(id);
+    setMoreView(null);
+    setSection("programmes");
+    scrollToTop();
+  }
+
+  function navigateFromDashboard(target, view) {
+    setSection(target);
+    setMoreView(target === "more" ? view || null : null);
+    scrollToTop();
   }
 
   // Clicking a notification lands you on the screen it came from,
@@ -132,14 +155,15 @@ export default function App() {
   async function signOut() {
     await supabase.auth.signOut();
     setMoreView(null);
-    setSection("programmes");
+    setSection("home");
   }
 
+  // BATCH9-MARKER splash
   if (loading) {
     return (
-      <div role="status" aria-live="polite" aria-label="Loading the hub" style={{ minHeight: "100vh", background: B.blue, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div role="status" aria-live="polite" aria-label="Loading the hub" style={{ minHeight: "100vh", background: B.navyDeep, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <style>{GFONTS}</style>
-        <YCDILogo height={52} dark={true} />
+        <YCDILogo height={62} dark markOnly />
       </div>
     );
   }
@@ -186,6 +210,7 @@ export default function App() {
   }
 
   function pageTitle() {
+    if (section === "home") return "Dashboard";
     if (section === "spiritual") return "Spiritual Ministry Framework";
     if (section === "prayer") return "Prayer Manual";
     if (section === "directory") return "People Directory";
@@ -234,6 +259,7 @@ export default function App() {
 
       {(() => {
         const TABS = [
+          { id: "home", label: "Dashboard", short: "Dashboard" },
           { id: "programmes", label: "Programme Operations", short: "Programmes" },
           { id: "spiritual", label: "Spiritual Ministry", short: "Spiritual" },
           { id: "prayer", label: "Prayer Manual", short: "Prayer" },
@@ -334,10 +360,12 @@ export default function App() {
       ) : null}
 
       <main id="ycdi-main" tabIndex={-1} style={{ padding: isMobile ? "16px 14px" : "24px", maxWidth: 980, margin: "0 auto", boxSizing: "border-box", outline: "none" }}>
-        <div style={{ marginBottom: 22 }}>
-          <h1 style={{ margin: 0, fontSize: isMobile ? 19 : 22, fontWeight: 700, color: B.black, fontFamily: "'Montserrat',sans-serif" }}>{pageTitle()}</h1>
-          <div style={{ fontSize: 12, color: B.muted, marginTop: 3 }}>YCDI - {new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</div>
-        </div>
+        {section === "home" ? null : (
+          <div style={{ marginBottom: 22 }}>
+            <h1 style={{ margin: 0, fontSize: isMobile ? 19 : 22, fontWeight: 700, color: B.black, fontFamily: "'Montserrat',sans-serif" }}>{pageTitle()}</h1>
+            <div style={{ fontSize: 12, color: B.muted, marginTop: 3 }}>YCDI - {new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</div>
+          </div>
+        )}
 
         {profile.is_admin ? (
           <ErrorBoundary label="Sign-up requests" fullName={profile.full_name}><PendingApprovals /></ErrorBoundary>
@@ -347,11 +375,26 @@ export default function App() {
           key={section + ":" + (moreView || "")}
           label={pageTitle()}
           fullName={profile.full_name}
-          onBack={() => goToSection("programmes")}
+          onBack={() => goToSection("home")}
         >
           <Suspense fallback={<SectionLoading />}>
+            {section === "home" ? (
+              <DashboardSection
+                profile={profile}
+                chapters={chapters}
+                showToast={showToast}
+                onOpenProgram={openProgramFromDashboard}
+                onNavigate={navigateFromDashboard}
+              />
+            ) : null}
             {section === "programmes" && profile.role !== "TM" ? (
-              <ProgrammesSection profile={profile} chapters={chapters} showToast={showToast} />
+              <ProgrammesSection
+                profile={profile}
+                chapters={chapters}
+                showToast={showToast}
+                openProgramId={openProgramId}
+                onOpened={() => setOpenProgramId(null)}
+              />
             ) : null}
             {section === "spiritual" ? <SpiritualSection profile={profile} showToast={showToast} /> : null}
             {section === "prayer" ? <PrayerManualSection /> : null}

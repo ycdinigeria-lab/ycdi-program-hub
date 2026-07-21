@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase.js";
-import { B, GFONTS, inp, btnP } from "../theme.js";
-import { YCDILogo } from "../components/ui.jsx";
+import { B, inp, btnP } from "../theme.js";
+// BATCH9-MARKER setpassword-shell
+import AuthShell from "./AuthShell.jsx";
 import { Card, SHead, Field } from "../components/ui.jsx";
 import { clearAuthCallbackFromUrl } from "../lib/authCallback.js";
 import { humanise } from "../lib/errors.js";
@@ -109,19 +110,13 @@ export default function SetPasswordScreen({ recovery, email, onDone, onCancel, s
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: B.blue, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <style>{GFONTS}</style>
-      <div style={{ width: "100%", maxWidth: 420 }}>
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <YCDILogo height={52} dark={true} />
-          <div style={{ marginTop: 12, fontSize: 13, color: "rgba(255,255,255,0.65)" }}>Choose a new password</div>
-        </div>
-
-        <div style={{ background: B.white, borderRadius: 14, padding: "28px 28px 24px" }}>
-          <p style={{ margin: "0 0 18px", fontSize: 12.5, color: B.muted, lineHeight: 1.6 }}>
-            {email ? <>You are setting a new password for <strong style={{ color: B.black }}>{email}</strong>. </> : null}
-            Once it is saved you will go straight into the hub.
-          </p>
+    <AuthShell title="Choose a new password" subtitle="Once it is saved you will go straight into the hub.">
+      <>
+          {email ? (
+            <p style={{ margin: "0 0 18px", fontSize: 12.5, color: B.muted, lineHeight: 1.6, textAlign: "center" }}>
+              Setting a new password for <strong style={{ color: B.black }}>{email}</strong>.
+            </p>
+          ) : null}
           {form}
 
           {onCancel ? (
@@ -134,8 +129,7 @@ export default function SetPasswordScreen({ recovery, email, onDone, onCancel, s
               </button>
             </div>
           ) : null}
-        </div>
-      </div>
-    </div>
+      </>
+    </AuthShell>
   );
 }

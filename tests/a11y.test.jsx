@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { Badge, Avatar, Field, MiniBar, Toast, YCDILogo, SHead } from "../src/components/ui.jsx";
+import { Badge, Avatar, Field, MiniBar, Toast, YCDILogo, SHead, StatCard } from "../src/components/ui.jsx";
 import { srOnly, A11Y_CSS, liveRegionProps } from "../src/lib/a11y.js";
 import VolunteersSection from "../src/sections/VolunteersSection.jsx";
 import AuditLogSection from "../src/sections/AuditLogSection.jsx";
@@ -213,5 +213,23 @@ describe("who sees the two new cards in More", () => {
     const html = cards({ id: "u3", full_name: "Tobi Adekunle", role: "TM", is_admin: false, chapter_id: "c2", chapter_name: "Benin" });
     expect(html).not.toContain("Volunteer Register");
     expect(html).not.toContain("Audit Log");
+  });
+});
+
+// BATCH8-MARKER statcard-a11y
+describe("a stat card that filters the list", () => {
+  it("is a real button and says whether it is the one currently applied", () => {
+    const on = renderToStaticMarkup(<StatCard label="Pending" value={3} onClick={noop} selected={true} />);
+    const off = renderToStaticMarkup(<StatCard label="Pending" value={3} onClick={noop} selected={false} />);
+    expect(on).toContain("<button");
+    expect(on).toContain('aria-pressed="true"');
+    expect(off).toContain('aria-pressed="false"');
+  });
+
+  it("stays plain text when there is nothing to press, so no empty button is announced", () => {
+    const html = renderToStaticMarkup(<StatCard label="Students" value={1065} />);
+    expect(html).not.toContain("<button");
+    expect(html).not.toContain("aria-pressed");
+    expect(html).toContain("1065");
   });
 });

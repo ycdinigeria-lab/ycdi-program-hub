@@ -4,6 +4,8 @@
 import { describe, it, expect } from "vitest";
 import { renderToString } from "react-dom/server";
 
+// BATCH8-MARKER dashboard-first-frame
+import DashboardSection from "../src/sections/DashboardSection.jsx";
 import ParticipantsSection from "../src/sections/ParticipantsSection.jsx";
 import SafeguardingSection from "../src/sections/SafeguardingSection.jsx";
 import DirectorySection from "../src/sections/DirectorySection.jsx";
@@ -18,6 +20,8 @@ const noop = () => {};
 
 describe("first frame renders", () => {
   const cases = {
+    Dashboard: <DashboardSection profile={profile} chapters={chapters} showToast={noop} onOpenProgram={noop} onNavigate={noop} />,
+    DashboardAsTeamMember: <DashboardSection profile={{ ...profile, role: "TM", is_admin: false }} chapters={chapters} showToast={noop} onOpenProgram={noop} onNavigate={noop} />,
     Participants: <ParticipantsSection profile={profile} chapters={chapters} showToast={noop} />,
     Safeguarding: <SafeguardingSection profile={profile} chapters={chapters} showToast={noop} />,
     Directory: <DirectorySection profile={profile} chapters={chapters} showToast={noop} />,

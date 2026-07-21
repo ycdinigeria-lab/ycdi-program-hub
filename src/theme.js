@@ -9,6 +9,13 @@ export const B = {
   muted: "#5a5a5a", border: "#DCDCDC",
   purple: "#5B2D8E", purpleLight: "#F0E8FA",
   gold: "#BA7517", green: "#1a5c38",
+  // BATCH9-MARKER navy
+  //
+  // The signed-out screens sit on a deep navy rather than on #09ADEA. It is
+  // not a new brand colour and nothing inside the app uses it. It is a dark
+  // surface for a photograph and white type to sit on, which the brand blue
+  // is too light to do. Everything inside the white card stays brand.
+  navy: "#0B2A55", navyDeep: "#071D3D",
 };
 
 export const GFONTS = "@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Open+Sans:wght@400;600&display=swap');";

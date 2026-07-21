@@ -94,12 +94,37 @@ export function Field({ label, children, required, hint }) {
   );
 }
 
-export function StatCard({ label, value, accent }) {
-  return (
-    <div style={{ background: B.white, border: "1px solid " + B.border, borderRadius: 8, padding: "14px 16px", flex: "1 1 130px", borderTop: "3px solid " + (accent || B.blue) }}>
+// BATCH8-MARKER statcard-pressable
+//
+// Given an onClick this becomes a real button rather than a div with a
+// handler stapled to it, so it can be reached by keyboard and announces
+// whether it is currently the chosen filter. Without one it renders exactly
+// as it always did, which is why the older screens needed no edit.
+export function StatCard({ label, value, accent, onClick, selected }) {
+  const colour = accent || B.blue;
+  const style = {
+    background: selected ? B.blueLight : B.white,
+    border: "1px solid " + (selected ? colour : B.border),
+    borderRadius: 8,
+    padding: "14px 16px",
+    flex: "1 1 130px",
+    borderTop: "3px solid " + colour,
+    textAlign: "left",
+    width: onClick ? "100%" : undefined,
+    cursor: onClick ? "pointer" : undefined,
+    fontFamily: "'Open Sans',sans-serif",
+  };
+  const inner = (
+    <>
       <div style={{ fontSize: 11, color: B.muted, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</div>
-      <div style={{ fontSize: 26, fontWeight: 700, color: accent || B.blue, fontFamily: "'Montserrat',sans-serif" }}>{value}</div>
-    </div>
+      <div style={{ fontSize: 26, fontWeight: 700, color: colour, fontFamily: "'Montserrat',sans-serif" }}>{value}</div>
+    </>
+  );
+  if (!onClick) return <div style={style}>{inner}</div>;
+  return (
+    <button type="button" onClick={onClick} aria-pressed={!!selected} style={style}>
+      {inner}
+    </button>
   );
 }
 

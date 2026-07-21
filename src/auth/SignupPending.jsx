@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase.js";
-import { B, GFONTS, inp, btnP, sel } from "../theme.js";
-import { YCDILogo } from "../components/ui.jsx";
+import { B, inp, sel } from "../theme.js";
+// BATCH9-MARKER signup-shell
+import AuthShell, { authBtn, AuthNotice } from "./AuthShell.jsx";
 
 const hintStyle = { fontSize: 11, color: B.muted, marginTop: 5, lineHeight: 1.5 };
 
@@ -66,33 +67,27 @@ export default function SignupPending({ user, onComplete }) {
     await supabase.auth.signOut();
   }
 
-  const card = { background: B.white, borderRadius: 14, padding: "28px 28px 24px" };
-  const wrap = { minHeight: "100vh", background: B.blue, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 };
+  const heading = checking ? "Checking your account" : submitted ? "Request sent" : "One more step";
+  const strap = checking
+    ? null
+    : submitted
+      ? "Your account is with the National Coordinator."
+      : "A few details so whoever reviews this knows who you are and where you serve.";
 
   return (
-    <div style={wrap}>
-      <style>{GFONTS}</style>
-      <div style={{ width: "100%", maxWidth: 420 }}>
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <YCDILogo height={52} dark={true} />
-        </div>
-        <div style={card}>
+    <AuthShell title={heading} subtitle={strap}>
+      <>
           {checking ? (
             <div style={{ textAlign: "center", color: B.muted, fontSize: 13, padding: "20px 0" }}>Checking your account...</div>
           ) : submitted ? (
             <>
-              <div style={{ fontSize: 15, fontWeight: 700, color: B.black, fontFamily: "'Montserrat',sans-serif", marginBottom: 8 }}>Request sent</div>
               <div style={{ fontSize: 13, color: B.muted, lineHeight: 1.6, marginBottom: 20 }}>
-                Your account is waiting for approval from the National Coordinator. You'll be able to sign in as soon as it's approved. This usually doesn't take long, check back shortly.
+                You'll be able to sign in as soon as it's approved. This usually doesn't take long, check back shortly.
               </div>
-              <button onClick={signOut} style={{ ...btnP, width: "100%", textAlign: "center" }}>Sign out</button>
+              <button onClick={signOut} style={authBtn}>Sign out</button>
             </>
           ) : (
             <>
-              <div style={{ fontSize: 15, fontWeight: 700, color: B.black, fontFamily: "'Montserrat',sans-serif", marginBottom: 8 }}>One more step</div>
-              <div style={{ fontSize: 13, color: B.muted, lineHeight: 1.6, marginBottom: 18 }}>
-                Your email is confirmed. A few details so whoever reviews this knows who you are and where you serve.
-              </div>
               <form onSubmit={submit}>
                 <SField label="Full name" req>
                   <input value={form.fullName} onChange={(e) => set("fullName", e.target.value)} style={inp} placeholder="Your full name" />
@@ -123,8 +118,8 @@ export default function SignupPending({ user, onComplete }) {
                   <input value={form.referredBy} onChange={(e) => set("referredBy", e.target.value)} style={inp} placeholder="Someone at YCDI who knows you" />
                 </SField>
 
-                {err ? <div style={{ background: B.redLight, color: B.red, borderRadius: 8, padding: "9px 12px", fontSize: 12, marginBottom: 14 }}>{err}</div> : null}
-                <button type="submit" disabled={busy} style={{ ...btnP, width: "100%", textAlign: "center", opacity: busy ? 0.6 : 1 }}>
+                {err ? <AuthNotice tone="error">{err}</AuthNotice> : null}
+                <button type="submit" disabled={busy} style={{ ...authBtn, opacity: busy ? 0.6 : 1 }}>
                   {busy ? "Submitting…" : "Request Access"}
                 </button>
               </form>
@@ -133,8 +128,7 @@ export default function SignupPending({ user, onComplete }) {
               </button>
             </>
           )}
-        </div>
-      </div>
-    </div>
+      </>
+    </AuthShell>
   );
 }

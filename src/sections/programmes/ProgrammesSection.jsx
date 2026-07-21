@@ -7,7 +7,7 @@ import ProgramDetail from "./ProgramDetail.jsx";
 import NewProgramForm from "./NewProgramForm.jsx";
 import ReportForm from "./ReportForm.jsx";
 
-export default function ProgrammesSection({ profile, chapters, showToast }) {
+export default function ProgrammesSection({ profile, chapters, showToast, openProgramId, onOpened }) {
   const [programs, setPrograms] = useState([]);
   const [selected, setSelected] = useState(null);
   const [newMode, setNewMode] = useState(false);
@@ -35,6 +35,19 @@ export default function ProgrammesSection({ profile, chapters, showToast }) {
   }, [profile.role, profile.chapter_name]);
 
   useEffect(() => { loadPrograms(); }, [loadPrograms]);
+
+  // BATCH8-MARKER deep-link
+  //
+  // Somebody pressed Review on the dashboard. The programme cannot be
+  // opened until the list has arrived, so this waits for that and then
+  // clears the request. Without the clear, pressing Back inside the detail
+  // view would reopen the same programme immediately.
+  useEffect(() => {
+    if (!openProgramId || loading) return;
+    const wanted = programs.find((p) => p.id === openProgramId);
+    if (wanted) openProgram(wanted);
+    if (onOpened) onOpened();
+  }, [openProgramId, loading, programs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function openProgram(p) {
     const { data: full } = await supabase.from("programs").select("*, chapters(name)").eq("id", p.id).single();

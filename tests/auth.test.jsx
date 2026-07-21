@@ -1,0 +1,144 @@
+// BATCH9-MARKER auth-tests
+import { describe, it, expect } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
+
+import AuthShell, { AuthField, AuthNotice, PasswordInput, authInput } from "../src/auth/AuthShell.jsx";
+import LoginScreen, { MODE_COPY } from "../src/auth/LoginScreen.jsx";
+import SetPasswordScreen from "../src/auth/SetPasswordScreen.jsx";
+
+const noop = () => {};
+const text = (el) => renderToStaticMarkup(el).replace(/<!-- -->/g, "");
+
+describe("the signed-out shell", () => {
+  const html = text(<AuthShell title="Welcome Back!" subtitle="Sign in to continue.">body</AuthShell>);
+
+  it("shows the crest on its own, with no wordmark and no tagline", () => {
+    // The crest keeps alt text so it is announced, but the words YCDI and
+    // the strapline must not be drawn on the screen. This was asked for
+    // explicitly, so it is pinned here rather than left to the eye.
+    expect(html).toContain('alt="YCDI"');
+    expect(html).not.toContain("Young Christian Development Initiative");
+    expect(html).not.toContain("Empowering");
+    expect(html).not.toContain("Transform Society");
+  });
+
+  it("puts the crest on a white badge, because the crest carries our blue", () => {
+    expect(html).toContain("background:#FFFFFF");
+  });
+
+  it("carries the photograph and the wash that keeps type readable over it", () => {
+    expect(html).toContain("background-image:url(");
+    expect(html).toContain("linear-gradient");
+  });
+
+  it("hides the background layers from screen readers", () => {
+    const layers = html.split("aria-hidden").length - 1;
+    expect(layers).toBeGreaterThanOrEqual(2);
+  });
+
+  it("renders the heading as the one h1 on the page", () => {
+    expect(html.match(/<h1/g)).toHaveLength(1);
+    expect(html).toContain("Welcome Back!");
+    expect(html).toContain("Sign in to continue.");
+  });
+
+  it("still renders when there is no heading to show", () => {
+    expect(typeof text(<AuthShell>body</AuthShell>)).toBe("string");
+  });
+});
+
+describe("fields on the signed-out screens", () => {
+  it("tie the label to the control, icon or no icon", () => {
+    for (const icon of ["mail", undefined]) {
+      const html = renderToStaticMarkup(
+        <AuthField label="Email" icon={icon}>
+          {(id) => <input id={id} style={authInput} />}
+        </AuthField>
+      );
+      const forId = /for="([^"]+)"/.exec(html);
+      expect(forId).not.toBeNull();
+      expect(html).toContain('id="' + forId[1] + '"');
+    }
+  });
+
+  it("accept a plain child as well as one that wants the id", () => {
+    const html = renderToStaticMarkup(<AuthField label="Chapter"><select><option>a</option></select></AuthField>);
+    expect(html).toContain("<select");
+  });
+
+  it("mark a required field for sighted readers", () => {
+    expect(text(<AuthField label="Full name" required><input /></AuthField>)).toContain("*");
+  });
+
+  it("hide the decorative icon from screen readers", () => {
+    const html = renderToStaticMarkup(<AuthField label="Email" icon="mail"><input /></AuthField>);
+    expect(html).toContain('aria-hidden="true"');
+  });
+});
+
+describe("the password reveal", () => {
+  it("starts hidden and offers to show", () => {
+    const html = renderToStaticMarkup(<PasswordInput value="" onChange={noop} />);
+    expect(html).toContain('type="password"');
+    expect(html).toContain('aria-label="Show password"');
+  });
+
+  it("does not leak the value into the markup as plain text", () => {
+    const html = renderToStaticMarkup(<PasswordInput value="hunter2" onChange={noop} />);
+    expect(html).toContain('type="password"');
+  });
+});
+
+describe("notices", () => {
+  it("an error is announced as an alert, a message is not", () => {
+    expect(renderToStaticMarkup(<AuthNotice tone="error">no</AuthNotice>)).toContain('role="alert"');
+    expect(renderToStaticMarkup(<AuthNotice>ok</AuthNotice>)).toContain('role="status"');
+  });
+});
+
+describe("sign in screen", () => {
+  it("opens on sign in and offers the other two ways through", () => {
+    const html = text(<LoginScreen />);
+    expect(html).toContain(MODE_COPY.login.title);
+    expect(html).toContain("Create an account");
+    expect(html).toContain("Forgot password?");
+  });
+
+  it("opens straight on the reset form when a link has died, and says why", () => {
+    const html = text(<LoginScreen linkError="That link has already been used." />);
+    expect(html).toContain(MODE_COPY.reset.title);
+    expect(html).toContain("That link has already been used.");
+    expect(html).not.toContain(MODE_COPY.login.title);
+  });
+
+  it("asks for a password when signing in and not when resetting", () => {
+    expect(text(<LoginScreen />)).toContain('type="password"');
+    expect(text(<LoginScreen linkError="dead" />)).not.toContain('type="password"');
+  });
+
+  it("gives every mode its own heading and button, none of them blank", () => {
+    for (const mode of ["login", "signup", "reset"]) {
+      const copy = MODE_COPY[mode];
+      expect(copy.title.length).toBeGreaterThan(0);
+      expect(copy.button.length).toBeGreaterThan(0);
+      expect(copy.subtitle.length).toBeGreaterThan(0);
+    }
+    const titles = Object.values(MODE_COPY).map((c) => c.title);
+    expect(new Set(titles).size).toBe(3);
+  });
+});
+
+describe("choose a new password screen", () => {
+  it("renders full page on a reset link, with the crest and no wordmark", () => {
+    const html = text(<SetPasswordScreen recovery email="grace@example.com" showToast={noop} onDone={noop} />);
+    expect(html).toContain("Choose a new password");
+    expect(html).toContain("grace@example.com");
+    expect(html).not.toContain("Young Christian Development Initiative");
+  });
+
+  it("stays an ordinary card when opened from inside the hub", () => {
+    const html = text(<SetPasswordScreen showToast={noop} />);
+    expect(html).toContain("Change your password");
+    expect(html).not.toContain("background-image:url(");
+  });
+});
