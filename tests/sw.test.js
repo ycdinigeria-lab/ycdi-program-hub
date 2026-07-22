@@ -11,6 +11,13 @@ import { dirname, join } from "node:path";
 const here = dirname(fileURLToPath(import.meta.url));
 const SW_SOURCE = readFileSync(join(here, "..", "public", "sw.js"), "utf8");
 
+// Read the current cache version straight from the worker rather than
+// spelling it out here. When the version is bumped for a new batch, these
+// tests follow it instead of silently going stale a version behind.
+const VERSION = (SW_SOURCE.match(/var VERSION = "([^"]+)"/) || [])[1];
+const SHELL = "ycdi-shell-" + VERSION;
+const ASSETS = "ycdi-assets-" + VERSION;
+
 const APP = "https://programmes.ycdinigeria.org";
 const DB = "https://dnympoqsnrlgsvhznsjb.supabase.co";
 
@@ -185,7 +192,7 @@ describe("the app shell", () => {
 
   it("falls back to the saved copy when there is no connection", async () => {
     const sw = boot({ offline: true });
-    const shell = sw.bucket("ycdi-shell-b4-1");
+    const shell = sw.bucket(SHELL);
     await shell.put("/index.html", { origin: "saved" });
     const out = await route(sw, APP + "/directory", { mode: "navigate" });
     expect(out.origin).toBe("saved");
@@ -202,7 +209,7 @@ describe("built files", () => {
   it("come from the cache without touching the network once saved", async () => {
     const sw = boot();
     const url = APP + "/assets/react-2e1558b1.js";
-    await sw.bucket("ycdi-assets-b4-1").put(url, { origin: "saved" });
+    await sw.bucket(ASSETS).put(url, { origin: "saved" });
     const out = await route(sw, url);
     expect(out.origin).toBe("saved");
     expect(sw.network).toHaveLength(0);
@@ -213,7 +220,7 @@ describe("built files", () => {
     const url = APP + "/assets/index-48b142db.js";
     expect((await route(sw, url)).origin).toBe("network");
     await new Promise((r) => setTimeout(r, 0));
-    expect(await sw.bucket("ycdi-assets-b4-1").match(url)).toBeTruthy();
+    expect(await sw.bucket(ASSETS).match(url)).toBeTruthy();
   });
 
   it("cover the icons and the fonts a slow connection would otherwise refetch", async () => {
@@ -229,14 +236,14 @@ describe("moving between versions", () => {
     const sw = boot();
     sw.bucket("ycdi-shell-older");
     sw.bucket("ycdi-assets-older");
-    sw.bucket("ycdi-shell-b4-1");
-    sw.bucket("ycdi-assets-b4-1");
+    sw.bucket(SHELL);
+    sw.bucket(ASSETS);
 
     await runLifecycle(sw, "activate");
 
     const left = await sw.cacheStorage.keys();
-    expect(left).toContain("ycdi-shell-b4-1");
-    expect(left).toContain("ycdi-assets-b4-1");
+    expect(left).toContain(SHELL);
+    expect(left).toContain(ASSETS);
     expect(left).not.toContain("ycdi-shell-older");
     expect(left).not.toContain("ycdi-assets-older");
     expect(sw.flags.claimed).toBe(true);

@@ -267,22 +267,17 @@ export default function App() {
           { id: "more", label: "More", short: "More" },
         ].filter((t) => t.id !== "programmes" || profile.role !== "TM");
         const tabBtn = (t) => (
-          <button key={t.id} onClick={() => goToSection(t.id)} aria-current={section === t.id ? "page" : undefined} style={{ background: "none", border: "none", borderBottom: `3px solid ${section === t.id ? B.red : "transparent"}`, color: section === t.id ? B.white : "rgba(255,255,255,0.65)", padding: "14px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Montserrat',sans-serif", fontWeight: section === t.id ? 700 : 400, whiteSpace: "nowrap", flexShrink: 0 }}>
+          <button key={t.id} onClick={() => goToSection(t.id)} aria-current={section === t.id ? "page" : undefined} style={{ background: "none", border: "none", borderBottom: `3px solid ${section === t.id ? B.white : "transparent"}`, color: section === t.id ? B.white : "rgba(255,255,255,0.65)", padding: "14px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Montserrat',sans-serif", fontWeight: section === t.id ? 700 : 400, whiteSpace: "nowrap", flexShrink: 0 }}>
             {t.label}
           </button>
         );
         // The crest carries the name on its own now, and it doubles as the
-        // way home. A small Dashboard link sits under it so the route is
-        // spelled out rather than left for people to guess.
+        // way home. The label below stays on the button for screen readers,
+        // so tapping the crest still announces where it goes.
         const logoHome = (h) => (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-            <button onClick={() => goToSection("home")} aria-label="Go to dashboard" style={{ background: "none", border: "none", padding: 0, margin: 0, cursor: "pointer", display: "flex", lineHeight: 0 }}>
-              <YCDILogo height={h} dark markOnly />
-            </button>
-            <button onClick={() => goToSection("home")} style={{ background: "none", border: "none", padding: 0, margin: 0, cursor: "pointer", color: "rgba(255,255,255,0.9)", fontSize: 10, fontWeight: 700, fontFamily: "'Montserrat',sans-serif", letterSpacing: "0.03em", textDecoration: "underline", textUnderlineOffset: 3 }}>
-              Dashboard
-            </button>
-          </div>
+          <button onClick={() => goToSection("home")} aria-label="Go to dashboard" style={{ background: "none", border: "none", padding: 0, margin: 0, cursor: "pointer", display: "flex", lineHeight: 0 }}>
+            <YCDILogo height={h} dark markOnly />
+          </button>
         );
         const roleLine = (profile.role === "NC" ? "National Coordinator" : profile.role === "TM" ? profile.chapter_name + " Team Member" : profile.chapter_name + " RC") + (profile.is_admin ? " · Admin" : "");
         const userBlock = (
@@ -305,7 +300,7 @@ export default function App() {
 
         if (isMobile) {
           return (
-            <div className="ycdi-onblue" style={{ position: "sticky", top: 0, zIndex: 100 }}>
+            <div className="ycdi-onblue" style={{ position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 10px rgba(0,0,0,0.12)" }}>
               <div style={{ background: B.blue, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", gap: 10 }}>
                 {logoHome(30)}
                 {userBlock}
@@ -323,7 +318,7 @@ export default function App() {
                         flex: "1 1 28%",
                         minWidth: 0,
                         background: on ? B.white : "rgba(255,255,255,0.14)",
-                        color: on ? B.red : "rgba(255,255,255,0.9)",
+                        color: on ? B.brandDeep : "rgba(255,255,255,0.9)",
                         border: "none",
                         borderRadius: 20,
                         padding: "9px 8px",
@@ -345,7 +340,7 @@ export default function App() {
           );
         }
         return (
-          <nav aria-label="Sections" className="ycdi-onblue" style={{ background: B.blue, display: "flex", alignItems: "center", padding: "0 20px", position: "sticky", top: 0, zIndex: 100 }}>
+          <nav aria-label="Sections" className="ycdi-onblue" style={{ background: B.blue, display: "flex", alignItems: "center", padding: "0 20px", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 10px rgba(0,0,0,0.12)" }}>
             <div style={{ padding: "8px 0", marginRight: 20, paddingRight: 20, borderRight: "1px solid rgba(255,255,255,0.2)" }}>
               {logoHome(36)}
             </div>
@@ -354,8 +349,6 @@ export default function App() {
           </nav>
         );
       })()}
-
-      <div style={{ background: B.red, height: 4 }} />
 
       {updateReady ? (
         <div role="status" aria-live="polite" style={{ background: B.blueDark, color: B.white, padding: "9px 14px", fontSize: 12.5, textAlign: "center", lineHeight: 1.5, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>

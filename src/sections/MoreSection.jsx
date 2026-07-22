@@ -61,7 +61,7 @@ export const MORE_FEATURES = [
     title: "Calendar & Notices",
     short: "Events and announcements",
     icon: ICONS.calendar,
-    accent: B.red,
+    accent: B.blue,
     render: (props) => <CalendarNoticesSection {...props} />,
   },
   {
@@ -133,7 +133,7 @@ export const MORE_FEATURES = [
     title: "Safeguarding",
     short: "Report and track concerns",
     icon: ICONS.shield,
-    accent: B.red,
+    accent: B.blue,
     // Access here follows YCDI-SAF-004, not the app's usual admin rule.
     // Only the Designated Safeguarding Officers and the Board
     // Safeguarding Chair. The database enforces it as well.
@@ -216,41 +216,50 @@ export function moreFeatureTitle(id) {
   return f ? f.title : "More";
 }
 
+// One consistent treatment for every card. The colour is carried by the
+// brand blue across the whole grid rather than a different hue per card,
+// which keeps it calm and lets the icon and title do the work of telling
+// the cards apart. Hover and the nudge on the chevron live in the
+// stylesheet in the list below, so no handler is needed on each card.
 function FeatureCard({ f, onOpen }) {
   const disabled = !!f.soon;
-  const accent = disabled ? B.muted : f.accent;
   return (
     <button
       onClick={disabled ? undefined : onOpen}
       disabled={disabled}
+      className={disabled ? undefined : "ycdi-morecard"}
       style={{
         textAlign: "left",
-        background: disabled ? B.offWhite : accent + "12",
-        border: `1px solid ${disabled ? B.border : accent + "26"}`,
-        borderRadius: 16,
-        padding: 15,
+        background: B.white,
+        border: `1px solid ${disabled ? B.border : "#E4E8EC"}`,
+        borderRadius: 14,
+        padding: "14px",
         cursor: disabled ? "default" : "pointer",
         fontFamily: "'Open Sans',sans-serif",
-        opacity: disabled ? 0.75 : 1,
+        opacity: disabled ? 0.7 : 1,
         display: "flex",
-        flexDirection: "column",
-        gap: 11,
+        alignItems: "center",
+        gap: 13,
         width: "100%",
-        minHeight: 116,
       }}
     >
-      <div style={{ width: 44, height: 44, borderRadius: 13, background: disabled ? B.white : accent + "24", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill={accent}><path d={f.icon} /></svg>
+      <div style={{ width: 46, height: 46, borderRadius: 12, background: disabled ? B.offWhite : B.blueLight, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <svg width="23" height="23" viewBox="0 0 24 24" fill={disabled ? B.muted : B.blue}><path d={f.icon} /></svg>
       </div>
-      <div style={{ minWidth: 0 }}>
+      <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           <span style={{ fontFamily: "'Montserrat',sans-serif", fontWeight: 700, fontSize: 14, color: B.black, lineHeight: 1.25 }}>{f.title}</span>
           {disabled ? (
             <span style={{ background: B.offWhite, color: B.muted, padding: "2px 8px", borderRadius: 20, fontSize: 9.5, fontWeight: 700, fontFamily: "'Montserrat',sans-serif" }}>Soon</span>
           ) : null}
         </div>
-        <p style={{ margin: "3px 0 0", fontSize: 11.5, color: B.muted, lineHeight: 1.45 }}>{f.short}</p>
+        <p style={{ margin: "2px 0 0", fontSize: 11.5, color: B.muted, lineHeight: 1.4 }}>{f.short}</p>
       </div>
+      {!disabled ? (
+        <svg className="ycdi-morechev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B.muted} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+          <path d="M9 6l6 6-6 6" />
+        </svg>
+      ) : null}
     </button>
   );
 }
@@ -293,18 +302,31 @@ export default function MoreSection({ profile, chapters, showToast, view, setVie
 
   return (
     <div>
-      <p style={{ margin: "0 0 20px", fontSize: 13, color: B.muted, lineHeight: 1.6 }}>
+      <style>{`
+        .ycdi-morecard { transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease; }
+        .ycdi-morecard:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(9,173,234,0.14); border-color: ${B.blue}; }
+        .ycdi-morecard:hover .ycdi-morechev { transform: translateX(3px); stroke: ${B.blue}; }
+        .ycdi-morechev { transition: transform .14s ease, stroke .14s ease; }
+        @media (hover: none) {
+          .ycdi-morecard:hover { transform: none; box-shadow: none; border-color: #E4E8EC; }
+          .ycdi-morecard:hover .ycdi-morechev { transform: none; stroke: ${B.muted}; }
+        }
+      `}</style>
+      <p style={{ margin: "0 0 22px", fontSize: 13, color: B.muted, lineHeight: 1.6 }}>
         Everything else in the hub, grouped by area.
       </p>
       {CATEGORIES.map((cat) => {
         const items = visibleFeatures.filter((f) => f.category === cat.id);
         if (items.length === 0) return null;
         return (
-          <div key={cat.id} style={{ marginBottom: 26 }}>
-            <h2 style={{ fontSize: 11, fontWeight: 700, color: B.muted, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 12px", fontFamily: "'Montserrat',sans-serif" }}>
-              {cat.label}
-            </h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 168px), 1fr))", gap: 12 }}>
+          <div key={cat.id} style={{ marginBottom: 28 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 0 13px" }}>
+              <h2 style={{ fontSize: 11, fontWeight: 700, color: B.muted, textTransform: "uppercase", letterSpacing: "0.09em", margin: 0, fontFamily: "'Montserrat',sans-serif", whiteSpace: "nowrap" }}>
+                {cat.label}
+              </h2>
+              <div style={{ flex: 1, height: 1, background: B.border, opacity: 0.6 }} />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 244px), 1fr))", gap: 12 }}>
               {items.map((f) => (
                 <FeatureCard key={f.id} f={f} onOpen={() => setView(f.id)} />
               ))}
