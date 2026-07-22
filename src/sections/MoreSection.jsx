@@ -1,9 +1,9 @@
 import { lazy, Suspense } from "react";
 import { B } from "../theme.js";
 
-// Six features, most of which any one person never opens. Loading them on
-// demand keeps them out of the file that has to arrive before the login
-// screen can be drawn.
+// Everything that lives behind the "More" tab. Loading each one on demand
+// keeps them out of the file that has to arrive before the login screen can
+// be drawn.
 //
 // BATCH4-MARKER more-lazy
 const DocumentsSection = lazy(() => import("./DocumentsSection.jsx"));
@@ -25,12 +25,9 @@ const ApplicationsSection = lazy(() => import("./ApplicationsSection.jsx"));
 // BATCH7B-MARKER more-renewals
 const RenewalsSection = lazy(() => import("./RenewalsSection.jsx"));
 
-// Everything that lives behind the "More" tab. New features get added here
-// instead of adding another button to the top navigation, which was already
-// running out of room across five tabs.
-//
-// Each entry needs: id, title, blurb, icon path, and a render function.
-// Set `soon: true` to show it as a card without making it clickable yet.
+// Each entry needs: id, category, title, short, icon path, accent and a
+// render function. Set `soon: true` to show it as a card without making it
+// clickable yet.
 
 const ICONS = {
   docs: "M6 2h7l5 5v15H6zm7 1.5V8h4.5zM8 12h8v1.6H8zm0 3.4h8V17H8zm0-6.8h4v1.6H8z",
@@ -47,35 +44,49 @@ const ICONS = {
   badge: "M12 2l2.4 1.8 3-.3 1 2.8 2.6 1.5-1 2.9 1 2.9-2.6 1.5-1 2.8-3-.3L12 22l-2.4-1.8-3 .3-1-2.8L3 16.2l1-2.9-1-2.9 2.6-1.5 1-2.8 3 .3zm0 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM7.6 17.4a5.6 5.6 0 018.8 0 6.7 6.7 0 01-8.8 0z",
 };
 
+// The areas the cards are grouped under, in the order they appear. A group
+// with nothing visible to the person simply does not render.
+const CATEGORIES = [
+  { id: "comms", label: "Communication & Resources" },
+  { id: "people", label: "People & Programmes" },
+  { id: "compliance", label: "Safeguarding & Compliance" },
+  { id: "admin", label: "Administration" },
+  { id: "account", label: "Your Account" },
+];
+
 export const MORE_FEATURES = [
   {
     id: "calendar",
+    category: "comms",
     title: "Calendar & Notices",
-    blurb: "Announcements and dated events, general or for one chapter.",
+    short: "Events and announcements",
     icon: ICONS.calendar,
     accent: B.red,
     render: (props) => <CalendarNoticesSection {...props} />,
   },
   {
     id: "documents",
+    category: "comms",
     title: "Documents & Resources",
-    blurb: "Guides, templates, policies and study material, sorted into categories.",
+    short: "Guides, templates and policies",
     icon: ICONS.docs,
     accent: B.blue,
     render: (props) => <DocumentsSection {...props} />,
   },
   {
     id: "messaging",
+    category: "comms",
     title: "Messaging",
-    blurb: "Direct messages and chapter channels, so conversations stop living on WhatsApp.",
+    short: "Messages and chapter channels",
     icon: ICONS.chat,
     accent: B.purple,
     render: (props) => <MessagingSection {...props} />,
   },
   {
     id: "participants",
+    category: "people",
     title: "Participants & Discipleship",
-    blurb: "Young people, where they are on the five stages, consent on file, and who is walking with them.",
+    short: "Young people and their journey",
     icon: ICONS.people,
     accent: B.green,
     // Team Members are deliberately excluded. YCDI's Data Protection
@@ -87,78 +98,10 @@ export const MORE_FEATURES = [
     render: (props) => <ParticipantsSection {...props} />,
   },
   {
-    id: "safeguarding",
-    title: "Safeguarding",
-    blurb: "Report a concern, follow the register, and see who is cleared to work with children.",
-    icon: ICONS.shield,
-    accent: B.red,
-    // Access here follows YCDI-SAF-004, not the app's usual admin rule.
-    // Only the Designated Safeguarding Officers and the Board
-    // Safeguarding Chair. The database enforces it as well.
-    roles: ["NC", "RC"],
-    render: (props) => <SafeguardingSection {...props} />,
-  },
-  {
-    id: "admin",
-    title: "Manage Admins",
-    blurb: "Decide who can approve sign-ups, manage content and edit the directory nationally.",
-    icon: ICONS.admin,
-    accent: B.black,
-    adminOnly: true,
-    render: (props) => <AdminSection {...props} />,
-  },
-  {
-    id: "kpi",
-    title: "Board & Funder KPIs",
-    blurb: "The quarterly Board table, filled in from real figures, with the gaps declared rather than guessed.",
-    icon: ICONS.chart,
-    accent: B.gold,
-    // Coordinators can see it because a chapter that cannot see the target
-    // has no way of knowing it is behind. Row security still decides whose
-    // beneficiary figures each person is shown.
-    roles: ["NC", "RC"],
-    render: (props) => <KpiReportSection {...props} />,
-  },
-  {
-    id: "profile",
-    title: "My Profile",
-    blurb: "Your own name, photo, phone number and volunteer record. Everyone can edit their own.",
-    icon: ICONS.badge,
-    accent: B.green,
-    render: (props) => <MyProfileSection profile={props.profile} showToast={props.showToast} />,
-  },
-  {
-    id: "applications",
-    title: "Volunteer Applications",
-    blurb: "Applications arriving from the public form, what stage each one is at, and the link to share.",
-    icon: ICONS.inbox,
-    accent: B.blue,
-    // Coordinators and the National Coordinator, and deliberately not
-    // admins. An application carries a declaration of convictions and
-    // prior safeguarding concerns, which makes it screening material
-    // rather than personnel data. The database refuses admins too.
-    roles: ["NC", "RC"],
-    adminExempt: true,
-    render: (props) => <ApplicationsSection {...props} />,
-  },
-  {
-    id: "renewals",
-    title: "Declaration Renewals",
-    blurb: "Who has renewed their safeguarding declaration for the year, who has not, and the 31 January deadline.",
-    icon: ICONS.shield,
-    accent: B.gold,
-    // Coordinators, the National Coordinator and the Board Safeguarding
-    // Chair. A renewal list says who is out of compliance, which is
-    // screening material like everything else in this batch, so admins
-    // are kept out here and in the database.
-    roles: ["NC", "RC"],
-    adminExempt: true,
-    render: (props) => <RenewalsSection {...props} />,
-  },
-  {
     id: "volunteers",
+    category: "people",
     title: "Volunteer Register",
-    blurb: "Everyone in your chapter, where they are in the six onboarding steps, who mentors them, and who has gone quiet.",
+    short: "Your chapter's volunteers",
     icon: ICONS.hands,
     accent: B.blue,
     // Coordinators and the National Coordinator. A volunteer record is
@@ -170,9 +113,76 @@ export const MORE_FEATURES = [
     render: (props) => <VolunteersSection {...props} />,
   },
   {
+    id: "applications",
+    category: "people",
+    title: "Volunteer Applications",
+    short: "New volunteer applications",
+    icon: ICONS.inbox,
+    accent: B.blue,
+    // Coordinators and the National Coordinator, and deliberately not
+    // admins. An application carries a declaration of convictions and
+    // prior safeguarding concerns, which makes it screening material
+    // rather than personnel data. The database refuses admins too.
+    roles: ["NC", "RC"],
+    adminExempt: true,
+    render: (props) => <ApplicationsSection {...props} />,
+  },
+  {
+    id: "safeguarding",
+    category: "compliance",
+    title: "Safeguarding",
+    short: "Report and track concerns",
+    icon: ICONS.shield,
+    accent: B.red,
+    // Access here follows YCDI-SAF-004, not the app's usual admin rule.
+    // Only the Designated Safeguarding Officers and the Board
+    // Safeguarding Chair. The database enforces it as well.
+    roles: ["NC", "RC"],
+    render: (props) => <SafeguardingSection {...props} />,
+  },
+  {
+    id: "renewals",
+    category: "compliance",
+    title: "Declaration Renewals",
+    short: "Annual declaration status",
+    icon: ICONS.shield,
+    accent: B.gold,
+    // Coordinators, the National Coordinator and the Board Safeguarding
+    // Chair. A renewal list says who is out of compliance, which is
+    // screening material like everything else in this batch, so admins
+    // are kept out here and in the database.
+    roles: ["NC", "RC"],
+    adminExempt: true,
+    render: (props) => <RenewalsSection {...props} />,
+  },
+  {
+    id: "kpi",
+    category: "compliance",
+    title: "Board & Funder KPIs",
+    short: "Board and funder figures",
+    icon: ICONS.chart,
+    accent: B.gold,
+    // Coordinators can see it because a chapter that cannot see the target
+    // has no way of knowing it is behind. Row security still decides whose
+    // beneficiary figures each person is shown.
+    roles: ["NC", "RC"],
+    render: (props) => <KpiReportSection {...props} />,
+  },
+  {
+    id: "admin",
+    category: "admin",
+    title: "Manage Admins",
+    short: "Who can approve and edit",
+    icon: ICONS.admin,
+    accent: B.black,
+    adminOnly: true,
+    render: (props) => <AdminSection {...props} />,
+  },
+  {
     id: "audit",
+    category: "admin",
     title: "Audit Log",
-    blurb: "Who changed somebody's access, who moved a safeguarding case, who edited a KPI target. Append-only.",
+    short: "A record of key changes",
     icon: ICONS.ledger,
     accent: B.black,
     // The National Coordinator and admins. Not Regional Coordinators:
@@ -182,9 +192,19 @@ export const MORE_FEATURES = [
     render: (props) => <AuditLogSection {...props} />,
   },
   {
+    id: "profile",
+    category: "account",
+    title: "My Profile",
+    short: "Your details and record",
+    icon: ICONS.badge,
+    accent: B.green,
+    render: (props) => <MyProfileSection profile={props.profile} showToast={props.showToast} />,
+  },
+  {
     id: "password",
+    category: "account",
     title: "Change Password",
-    blurb: "Choose a new password for your own account. Everyone can do this.",
+    short: "Update your password",
     icon: ICONS.key,
     accent: B.blue,
     render: (props) => <SetPasswordScreen showToast={props.showToast} />,
@@ -198,37 +218,38 @@ export function moreFeatureTitle(id) {
 
 function FeatureCard({ f, onOpen }) {
   const disabled = !!f.soon;
+  const accent = disabled ? B.muted : f.accent;
   return (
     <button
       onClick={disabled ? undefined : onOpen}
       disabled={disabled}
       style={{
         textAlign: "left",
-        background: B.white,
-        border: `1px solid ${B.border}`,
-        borderTop: `3px solid ${disabled ? B.border : f.accent}`,
-        borderRadius: 12,
-        padding: "16px 18px",
+        background: disabled ? B.offWhite : accent + "12",
+        border: `1px solid ${disabled ? B.border : accent + "26"}`,
+        borderRadius: 16,
+        padding: 15,
         cursor: disabled ? "default" : "pointer",
         fontFamily: "'Open Sans',sans-serif",
-        opacity: disabled ? 0.72 : 1,
+        opacity: disabled ? 0.75 : 1,
         display: "flex",
-        gap: 13,
-        alignItems: "flex-start",
+        flexDirection: "column",
+        gap: 11,
         width: "100%",
+        minHeight: 116,
       }}
     >
-      <div style={{ width: 38, height: 38, borderRadius: 10, background: disabled ? B.offWhite : f.accent + "18", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        <svg width="19" height="19" viewBox="0 0 24 24" fill={disabled ? B.muted : f.accent}><path d={f.icon} /></svg>
+      <div style={{ width: 44, height: 44, borderRadius: 13, background: disabled ? B.white : accent + "24", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill={accent}><path d={f.icon} /></svg>
       </div>
       <div style={{ minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
-          <span style={{ fontFamily: "'Montserrat',sans-serif", fontWeight: 700, fontSize: 14.5, color: B.black }}>{f.title}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <span style={{ fontFamily: "'Montserrat',sans-serif", fontWeight: 700, fontSize: 14, color: B.black, lineHeight: 1.25 }}>{f.title}</span>
           {disabled ? (
-            <span style={{ background: B.offWhite, color: B.muted, padding: "2px 9px", borderRadius: 20, fontSize: 10, fontWeight: 700, fontFamily: "'Montserrat',sans-serif" }}>Coming soon</span>
+            <span style={{ background: B.offWhite, color: B.muted, padding: "2px 8px", borderRadius: 20, fontSize: 9.5, fontWeight: 700, fontFamily: "'Montserrat',sans-serif" }}>Soon</span>
           ) : null}
         </div>
-        <p style={{ margin: "5px 0 0", fontSize: 12.5, color: "#4B5563", lineHeight: 1.55 }}>{f.blurb}</p>
+        <p style={{ margin: "3px 0 0", fontSize: 11.5, color: B.muted, lineHeight: 1.45 }}>{f.short}</p>
       </div>
     </button>
   );
@@ -272,14 +293,25 @@ export default function MoreSection({ profile, chapters, showToast, view, setVie
 
   return (
     <div>
-      <p style={{ margin: "0 0 18px", fontSize: 13, color: B.muted, lineHeight: 1.7 }}>
-        The rest of the hub lives here. Pick one to open it.
+      <p style={{ margin: "0 0 20px", fontSize: 13, color: B.muted, lineHeight: 1.6 }}>
+        Everything else in the hub, grouped by area.
       </p>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))", gap: 14 }}>
-        {visibleFeatures.map((f) => (
-          <FeatureCard key={f.id} f={f} onOpen={() => setView(f.id)} />
-        ))}
-      </div>
+      {CATEGORIES.map((cat) => {
+        const items = visibleFeatures.filter((f) => f.category === cat.id);
+        if (items.length === 0) return null;
+        return (
+          <div key={cat.id} style={{ marginBottom: 26 }}>
+            <h2 style={{ fontSize: 11, fontWeight: 700, color: B.muted, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 12px", fontFamily: "'Montserrat',sans-serif" }}>
+              {cat.label}
+            </h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 168px), 1fr))", gap: 12 }}>
+              {items.map((f) => (
+                <FeatureCard key={f.id} f={f} onOpen={() => setView(f.id)} />
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

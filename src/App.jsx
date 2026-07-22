@@ -267,20 +267,36 @@ export default function App() {
           { id: "more", label: "More", short: "More" },
         ].filter((t) => t.id !== "programmes" || profile.role !== "TM");
         const tabBtn = (t) => (
-          <button key={t.id} onClick={() => goToSection(t.id)} aria-current={section === t.id ? "page" : undefined} style={{ background: "none", border: "none", borderBottom: `3px solid ${section === t.id ? B.yellow : "transparent"}`, color: section === t.id ? B.white : "rgba(255,255,255,0.65)", padding: "14px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Montserrat',sans-serif", fontWeight: section === t.id ? 700 : 400, whiteSpace: "nowrap", flexShrink: 0 }}>
+          <button key={t.id} onClick={() => goToSection(t.id)} aria-current={section === t.id ? "page" : undefined} style={{ background: "none", border: "none", borderBottom: `3px solid ${section === t.id ? B.red : "transparent"}`, color: section === t.id ? B.white : "rgba(255,255,255,0.65)", padding: "14px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Montserrat',sans-serif", fontWeight: section === t.id ? 700 : 400, whiteSpace: "nowrap", flexShrink: 0 }}>
             {t.label}
           </button>
         );
+        // The crest carries the name on its own now, and it doubles as the
+        // way home. A small Dashboard link sits under it so the route is
+        // spelled out rather than left for people to guess.
+        const logoHome = (h) => (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+            <button onClick={() => goToSection("home")} aria-label="Go to dashboard" style={{ background: "none", border: "none", padding: 0, margin: 0, cursor: "pointer", display: "flex", lineHeight: 0 }}>
+              <YCDILogo height={h} dark markOnly />
+            </button>
+            <button onClick={() => goToSection("home")} style={{ background: "none", border: "none", padding: 0, margin: 0, cursor: "pointer", color: "rgba(255,255,255,0.9)", fontSize: 10, fontWeight: 700, fontFamily: "'Montserrat',sans-serif", letterSpacing: "0.03em", textDecoration: "underline", textUnderlineOffset: 3 }}>
+              Dashboard
+            </button>
+          </div>
+        );
+        const roleLine = (profile.role === "NC" ? "National Coordinator" : profile.role === "TM" ? profile.chapter_name + " Team Member" : profile.chapter_name + " RC") + (profile.is_admin ? " · Admin" : "");
         const userBlock = (
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             <NotificationBell onOpen={openFromNotification} isMobile={isMobile} />
-            <Avatar name={profile.full_name} size={30} decorative={!isMobile} />
-            {!isMobile ? (
-              <div>
-                <div style={{ fontSize: 12, color: B.white, fontWeight: 700, fontFamily: "'Montserrat',sans-serif", lineHeight: 1.2 }}>{profile.full_name}</div>
-                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)" }}>{(profile.role === "NC" ? "National Coordinator" : profile.role === "TM" ? profile.chapter_name + " Team Member" : profile.chapter_name + " RC") + (profile.is_admin ? " · Admin" : "")}</div>
-              </div>
-            ) : null}
+            <button onClick={() => navigateFromDashboard("more", "profile")} aria-label={"My profile, " + profile.full_name} style={{ background: "none", border: "none", padding: 0, margin: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+              <Avatar name={profile.full_name} size={30} decorative />
+              {!isMobile ? (
+                <div style={{ textAlign: "left" }}>
+                  <div style={{ fontSize: 12, color: B.white, fontWeight: 700, fontFamily: "'Montserrat',sans-serif", lineHeight: 1.2, textDecoration: "underline", textUnderlineOffset: 2 }}>{profile.full_name}</div>
+                  <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)" }}>{roleLine}</div>
+                </div>
+              ) : null}
+            </button>
             <button onClick={signOut} style={{ background: "none", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 6, color: "rgba(255,255,255,0.75)", padding: "5px 12px", fontSize: 11, cursor: "pointer" }}>
               Sign out
             </button>
@@ -291,7 +307,7 @@ export default function App() {
           return (
             <div className="ycdi-onblue" style={{ position: "sticky", top: 0, zIndex: 100 }}>
               <div style={{ background: B.blue, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", gap: 10 }}>
-                <YCDILogo height={32} dark markOnly />
+                {logoHome(30)}
                 {userBlock}
               </div>
               <nav aria-label="Sections" style={{ background: B.blue, display: "flex", flexWrap: "wrap", gap: 6, padding: "0 10px 10px", borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: 10 }}>
@@ -307,7 +323,7 @@ export default function App() {
                         flex: "1 1 28%",
                         minWidth: 0,
                         background: on ? B.white : "rgba(255,255,255,0.14)",
-                        color: on ? B.blueDark : "rgba(255,255,255,0.9)",
+                        color: on ? B.red : "rgba(255,255,255,0.9)",
                         border: "none",
                         borderRadius: 20,
                         padding: "9px 8px",
@@ -330,8 +346,8 @@ export default function App() {
         }
         return (
           <nav aria-label="Sections" className="ycdi-onblue" style={{ background: B.blue, display: "flex", alignItems: "center", padding: "0 20px", position: "sticky", top: 0, zIndex: 100 }}>
-            <div style={{ padding: "12px 0", marginRight: 20, paddingRight: 20, borderRight: "1px solid rgba(255,255,255,0.2)" }}>
-              <YCDILogo height={38} dark={true} />
+            <div style={{ padding: "8px 0", marginRight: 20, paddingRight: 20, borderRight: "1px solid rgba(255,255,255,0.2)" }}>
+              {logoHome(36)}
             </div>
             {TABS.map(tabBtn)}
             <div style={{ marginLeft: "auto" }}>{userBlock}</div>
@@ -339,7 +355,7 @@ export default function App() {
         );
       })()}
 
-      <div style={{ background: B.yellow, height: 4 }} />
+      <div style={{ background: B.red, height: 4 }} />
 
       {updateReady ? (
         <div role="status" aria-live="polite" style={{ background: B.blueDark, color: B.white, padding: "9px 14px", fontSize: 12.5, textAlign: "center", lineHeight: 1.5, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>

@@ -19,7 +19,7 @@
  * with the three lines in the KILL SWITCH note at the bottom and deploy.
  */
 
-var VERSION = "b4-1";
+var VERSION = "b11-ui-1";
 var SHELL = "ycdi-shell-" + VERSION;
 var ASSETS = "ycdi-assets-" + VERSION;
 var KEEP = [SHELL, ASSETS];
