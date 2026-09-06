@@ -11,6 +11,8 @@ const CalendarNoticesSection = lazy(() => import("./CalendarNoticesSection.jsx")
 const AdminSection = lazy(() => import("./AdminSection.jsx"));
 const MessagingSection = lazy(() => import("./MessagingSection.jsx"));
 const ParticipantsSection = lazy(() => import("./ParticipantsSection.jsx"));
+// BATCH12-MARKER more-attendance
+const AttendanceSection = lazy(() => import("./AttendanceSection.jsx"));
 const SafeguardingSection = lazy(() => import("./SafeguardingSection.jsx"));
 const SetPasswordScreen = lazy(() => import("../auth/SetPasswordScreen.jsx"));
 // BATCH5-MARKER more-kpi
@@ -42,6 +44,7 @@ const ICONS = {
   hands: "M11 2h2v9h-2zm-4 3h2v6H7zm8 0h2v6h-2zM5 12h14v3a7 7 0 01-7 7 7 7 0 01-7-7z",
   ledger: "M5 2h11l3 3v17H5zm2 2v16h10V6.2L15.8 4zM8 8h8v1.7H8zm0 3.4h8v1.7H8zm0 3.4h5v1.7H8z",
   badge: "M12 2l2.4 1.8 3-.3 1 2.8 2.6 1.5-1 2.9 1 2.9-2.6 1.5-1 2.8-3-.3L12 22l-2.4-1.8-3 .3-1-2.8L3 16.2l1-2.9-1-2.9 2.6-1.5 1-2.8 3 .3zm0 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM7.6 17.4a5.6 5.6 0 018.8 0 6.7 6.7 0 01-8.8 0z",
+  checklist: "M4 4h10v2H4zm0 5h10v2H4zm0 5h6v2H4zm13.1 2.9l-2.9-2.9 1.4-1.4 1.5 1.5 3.5-3.5 1.4 1.4z",
 };
 
 // The areas the cards are grouped under, in the order they appear. A group
@@ -96,6 +99,20 @@ export const MORE_FEATURES = [
     // they cannot open.
     roles: ["NC", "RC"],
     render: (props) => <ParticipantsSection {...props} />,
+  },
+  {
+    id: "attendance",
+    category: "people",
+    title: "Attendance Register",
+    short: "Mark who came to a programme",
+    icon: ICONS.checklist,
+    accent: B.green,
+    // The same people who hold participant data. A coordinator records
+    // their own chapter, the National Coordinator can look. Recording
+    // itself is gated in the database by record_attendance, so a viewer
+    // sees the register but no Save button.
+    roles: ["NC", "RC"],
+    render: (props) => <AttendanceSection {...props} />,
   },
   {
     id: "volunteers",
