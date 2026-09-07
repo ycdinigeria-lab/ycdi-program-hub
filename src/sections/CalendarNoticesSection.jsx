@@ -7,7 +7,13 @@ import { Card, SHead, Field } from "../components/ui.jsx";
 
 function fmtDateTime(iso) {
   try {
-    return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    const d = new Date(iso);
+    const date = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    let h = d.getHours();
+    const min = String(d.getMinutes()).padStart(2, "0");
+    const ap = h < 12 ? "am" : "pm";
+    h = h % 12; if (h === 0) h = 12;
+    return `${date}, ${h}:${min} ${ap}`;
   } catch { return ""; }
 }
 
@@ -126,12 +132,99 @@ function AnnouncementComposer({ profile, chapters, editing, onSaved, onCancel, s
   );
 }
 
+// The five reactions. Stored as short codes in the database; drawn as emoji here.
+const REACTIONS = [
+  { code: "like", emoji: "👍" },
+  { code: "love", emoji: "❤️" },
+  { code: "pray", emoji: "🙏" },
+  { code: "fire", emoji: "🔥" },
+  { code: "celebrate", emoji: "🎉" },
+];
+
+function ReactionsBar({ reactions, myId, onToggle }) {
+  return (
+    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 12 }}>
+      {REACTIONS.map(({ code, emoji }) => {
+        const on = reactions.filter((r) => r.reaction === code);
+        const mine = on.some((r) => r.user_id === myId);
+        return (
+          <button
+            key={code}
+            onClick={() => onToggle(code)}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 5,
+              padding: "3px 10px", borderRadius: 20,
+              border: "1.5px solid " + (mine ? B.blue : B.border),
+              background: mine ? B.blueLight : B.white,
+              color: mine ? B.blueDark : B.muted,
+              fontSize: 13, cursor: "pointer", fontFamily: "'Open Sans',sans-serif",
+              fontWeight: mine ? 700 : 400,
+            }}
+          >
+            <span style={{ fontSize: 14 }}>{emoji}</span>
+            {on.length > 0 ? <span style={{ fontSize: 12 }}>{on.length}</span> : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function CommentThread({ comments, profile, onAdd, onDelete }) {
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const canModerate = (c) => c.created_by === profile.id || profile.role === "NC" || profile.is_admin;
+
+  async function submit() {
+    const body = text.trim();
+    if (!body || busy) return;
+    setBusy(true);
+    const ok = await onAdd(body);
+    setBusy(false);
+    if (ok) setText("");
+  }
+
+  return (
+    <div style={{ marginTop: 12, borderTop: "1px solid " + B.border, paddingTop: 12 }}>
+      {comments.length === 0 ? (
+        <div style={{ fontSize: 12, color: B.muted, marginBottom: 10 }}>No comments yet.</div>
+      ) : (
+        comments.map((c) => (
+          <div key={c.id} style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 13, color: B.black, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{c.body}</div>
+            <div style={{ fontSize: 11, color: B.muted, marginTop: 2, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <span>{c.author_name || "Someone"} · {fmtDateTime(c.created_at)}</span>
+              {canModerate(c) ? (
+                <span onClick={() => onDelete(c)} style={{ color: B.red, cursor: "pointer", textDecoration: "underline" }}>delete</span>
+              ) : null}
+            </div>
+          </div>
+        ))
+      )}
+      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+        <input
+          style={{ ...inp, marginBottom: 0 }}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}
+          placeholder="Write a comment"
+        />
+        <button onClick={submit} disabled={busy || !text.trim()} style={{ ...btnP, opacity: busy || !text.trim() ? 0.6 : 1, whiteSpace: "nowrap" }}>
+          {busy ? "…" : "Comment"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AnnouncementsView({ profile, chapters, showToast }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [composing, setComposing] = useState(false);
   const [editing, setEditing] = useState(null);
   const [filter, setFilter] = useState("all");
+  const [reactions, setReactions] = useState([]);
+  const [comments, setComments] = useState([]);
 
   const canPost = profile.role !== "TM";
   const chapterName = (id) => (chapters.find((c) => c.id === id) || {}).name;
@@ -139,8 +232,14 @@ function AnnouncementsView({ profile, chapters, showToast }) {
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from("announcements").select("*").order("created_at", { ascending: false });
-    setRows(data || []);
+    const [ann, react, comm] = await Promise.all([
+      supabase.from("announcements").select("*").order("created_at", { ascending: false }),
+      supabase.from("announcement_reactions").select("id,announcement_id,user_id,reaction"),
+      supabase.from("announcement_comments").select("*").order("created_at", { ascending: true }),
+    ]);
+    setRows(ann.data || []);
+    setReactions(react.data || []);
+    setComments(comm.data || []);
     setLoading(false);
   }
   useEffect(() => { load(); }, []);
@@ -151,6 +250,36 @@ function AnnouncementsView({ profile, chapters, showToast }) {
     if (error) { showToast("Could not delete: " + error.message, "error"); return; }
     showToast("Announcement deleted.");
     setRows((rs) => rs.filter((r) => r.id !== row.id));
+  }
+
+  async function toggleReaction(announcementId, code) {
+    const mine = reactions.find((r) => r.announcement_id === announcementId && r.user_id === profile.id && r.reaction === code);
+    if (mine) {
+      const { error } = await supabase.from("announcement_reactions").delete().eq("id", mine.id);
+      if (error) { showToast("Could not update: " + error.message, "error"); return; }
+      setReactions((rs) => rs.filter((r) => r.id !== mine.id));
+    } else {
+      const { data, error } = await supabase.from("announcement_reactions")
+        .insert({ announcement_id: announcementId, user_id: profile.id, reaction: code })
+        .select("id,announcement_id,user_id,reaction").single();
+      if (error) { showToast("Could not update: " + error.message, "error"); return; }
+      setReactions((rs) => [...rs, data]);
+    }
+  }
+
+  async function addComment(announcementId, body) {
+    const { data, error } = await supabase.from("announcement_comments")
+      .insert({ announcement_id: announcementId, body, created_by: profile.id, author_name: profile.full_name })
+      .select("*").single();
+    if (error) { showToast("Could not comment: " + error.message, "error"); return false; }
+    setComments((cs) => [...cs, data]);
+    return true;
+  }
+
+  async function removeComment(comment) {
+    const { error } = await supabase.from("announcement_comments").delete().eq("id", comment.id);
+    if (error) { showToast("Could not delete: " + error.message, "error"); return; }
+    setComments((cs) => cs.filter((c) => c.id !== comment.id));
   }
 
   const visible = rows.filter((r) => matchesFilter(r, filter));
@@ -191,6 +320,17 @@ function AnnouncementsView({ profile, chapters, showToast }) {
             </div>
             {r.body ? <p style={{ margin: "8px 0 0", fontSize: 13, lineHeight: 1.7, color: B.black, whiteSpace: "pre-wrap" }}>{r.body}</p> : null}
             <div style={{ fontSize: 11, color: B.muted, marginTop: 10 }}>{r.author_name || "YCDI"} · {fmtDateTime(r.created_at)}</div>
+            <ReactionsBar
+              reactions={reactions.filter((x) => x.announcement_id === r.id)}
+              myId={profile.id}
+              onToggle={(code) => toggleReaction(r.id, code)}
+            />
+            <CommentThread
+              comments={comments.filter((x) => x.announcement_id === r.id)}
+              profile={profile}
+              onAdd={(body) => addComment(r.id, body)}
+              onDelete={removeComment}
+            />
           </Card>
         ))
       )}
