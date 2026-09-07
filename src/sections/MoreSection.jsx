@@ -92,12 +92,12 @@ export const MORE_FEATURES = [
     short: "Young people and their journey",
     icon: ICONS.people,
     accent: B.green,
-    // Team Members are deliberately excluded. YCDI's Data Protection
-    // Policy says volunteers should not hold beneficiary data beyond
-    // what their own role requires, and this is not their role. The
-    // database refuses them too; this just stops them seeing a door
-    // they cannot open.
-    roles: ["NC", "RC"],
+    // Team Members get a narrowed version of this: only the young people
+    // they added or currently mentor, never the whole chapter. That door is
+    // opened and held narrow in the database (Batch 13), so a team member
+    // holding nobody simply sees an empty list. Coordinators and the
+    // National Coordinator see the chapter as before.
+    roles: ["NC", "RC", "TM"],
     render: (props) => <ParticipantsSection {...props} />,
   },
   {

@@ -35,6 +35,59 @@ export function isMinorBand(band) {
   return band !== "18+";
 }
 
+// ------------------------------------------------------------
+// Who may do what (Batch 13)
+// ------------------------------------------------------------
+// These decide what the screen offers. The database decides what actually
+// goes through, so a wrong guess here is a missing or a dead button, never
+// a hole. They are kept small and pure so they can be tested on their own.
+
+// A team member may now add a young person, alongside coordinators and
+// admins. The add form forces their own chapter and their own name.
+export function canAddParticipant(profile) {
+  return !!(profile.is_admin || profile.role === "RC" || profile.role === "TM");
+}
+
+// A team member becomes the mentor of anyone they add, so the record reads
+// as theirs from the first day and keeps doing so even if the authorship
+// link is ever cleared.
+export function selfMentorsOnCreate(profile) {
+  return profile.role === "TM";
+}
+
+// Editing here means moving a young person along the pathway and recording a
+// consent. A coordinator may for their chapter; a team member for a young
+// person they hold, which row security has already limited to ones they
+// added or mentor, so once the record has loaded the answer is simply yes.
+export function canEditParticipant(profile, p) {
+  if (profile.is_admin) return true;
+  if (profile.role === "RC") return !!(p && profile.chapter_name && p.chapters?.name === profile.chapter_name);
+  if (profile.role === "TM") return !!p;
+  return false;
+}
+
+// Withdrawing a consent, and assigning or ending a mentor, stay coordinator
+// work. A team member never does either, in the screen or in the database.
+export function isChapterCoordinator(profile, p) {
+  if (profile.is_admin) return true;
+  if (profile.role === "RC") return !!(p && profile.chapter_name && p.chapters?.name === profile.chapter_name);
+  return false;
+}
+
+// The stage totals and the outstanding-withdrawals banner are a chapter-wide
+// picture. A team member holds only their own few, so they get the list on
+// its own; the overview would read as nothing but zeros for them.
+export function showsChapterOverview(profile) {
+  return !!(profile.is_admin || profile.role === "NC" || profile.role === "RC");
+}
+
+export function participantsEmptyCopy(profile) {
+  if (profile.role === "TM") {
+    return "You are not holding anyone yet. When you add a young person, or a coordinator names you as their mentor, they show up here.";
+  }
+  return "No participants recorded yet. Once young people are added here, the pathway stops being a page of theory and starts being a record of who is actually moving.";
+}
+
 function StagePill({ stage, small }) {
   const c = STAGE_COLOUR[stage] || B.muted;
   return (
@@ -99,6 +152,18 @@ function AddParticipant({ profile, chapters, onCancel, onSaved, showToast }) {
       document_ref: f.consent_ref || null,
       recorded_by: profile.id,
     });
+
+    // A team member who adds a young person becomes their mentor, so the
+    // record is theirs from the start. If this one write fails the young
+    // person is still safely added and still theirs by authorship, so this
+    // warns rather than unwinds anything.
+    if (selfMentorsOnCreate(profile)) {
+      const { error: mErr } = await supabase.from("participant_mentors").insert({
+        participant_id: data.id,
+        mentor_id: profile.id,
+      });
+      if (mErr) showToast("Added, but you were not set as the mentor automatically. A coordinator can set that.", "warning");
+    }
 
     setSaving(false);
     showToast("Participant added.");
@@ -188,9 +253,14 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
   const [newConsent, setNewConsent] = useState("");
   const [consentRef, setConsentRef] = useState("");
   const [consentBy, setConsentBy] = useState("");
+  const [mentor, setMentor] = useState(null);
+  const [mentorOptions, setMentorOptions] = useState([]);
+  const [assignTo, setAssignTo] = useState("");
+  const [chapterProgs, setChapterProgs] = useState([]);
   const [busy, setBusy] = useState(false);
 
-  const canEdit = profile.is_admin || (profile.role === "RC" && p && profile.chapter_name && p.chapters?.name === profile.chapter_name);
+  const canEdit = canEditParticipant(profile, p);
+  const coordinator = isChapterCoordinator(profile, p);
 
   const load = useCallback(async () => {
     const { data } = await supabase.from("participants").select("*, chapters(name)").eq("id", id).single();
@@ -199,8 +269,21 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
     setHistory(h || []);
     const { data: c } = await supabase.from("participant_consents").select("*").eq("participant_id", id).order("granted_on", { ascending: false });
     setConsents(c || []);
-    const { data: a } = await supabase.from("participant_attendance").select("attended_on, programs(title, date)").eq("participant_id", id);
+    const { data: a } = await supabase.from("participant_attendance").select("program_id, attended_on, programs(title, date)").eq("participant_id", id);
     setAttendance(a || []);
+    const { data: m } = await supabase.from("participant_mentors")
+      .select("id, mentor_id, assigned_on, profiles(full_name, role)")
+      .eq("participant_id", id).is("ended_on", null)
+      .order("assigned_on", { ascending: false }).limit(1);
+    setMentor(m && m[0] ? m[0] : null);
+    const { data: opts } = await supabase.rpc("chapter_mentor_options", { p_participant: id });
+    setMentorOptions(opts || []);
+    if (data?.chapter_id) {
+      const { data: pr } = await supabase.from("programs")
+        .select("id, title, date").eq("chapter_id", data.chapter_id)
+        .not("date", "is", null).order("date", { ascending: false });
+      setChapterProgs(pr || []);
+    }
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
@@ -242,10 +325,39 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
     load();
   }
 
+  async function doAssignMentor() {
+    if (!assignTo) return;
+    setBusy(true);
+    const { error } = await supabase.rpc("assign_mentor", { p_participant: id, p_mentor: assignTo });
+    setBusy(false);
+    if (error) { showToast(error.message, "error"); return; }
+    setAssignTo("");
+    showToast("Mentor set.");
+    load();
+  }
+
+  async function doEndMentorship() {
+    setBusy(true);
+    const { error } = await supabase.rpc("end_mentorship", { p_participant: id });
+    setBusy(false);
+    if (error) { showToast(error.message, "error"); return; }
+    showToast("Mentorship ended.");
+    load();
+  }
+
+  async function toggleAttendance(programId, present) {
+    setBusy(true);
+    const { error } = await supabase.rpc("record_mentee_attendance", { p_participant: id, p_program: programId, p_present: present });
+    setBusy(false);
+    if (error) { showToast(error.message, "error"); return; }
+    load();
+  }
+
   if (!p) return <Card style={{ textAlign: "center", padding: 30, color: B.muted, fontSize: 13 }}>Loading…</Card>;
 
   const live = consents.filter((c) => !c.withdrawn_on);
   const available = CONSENT_TYPES.filter((t) => !live.some((c) => c.consent_type === t.id));
+  const attendedIds = new Set(attendance.map((a) => a.program_id));
 
   return (
     <>
@@ -285,6 +397,37 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
             </Field>
           </div>
           <button style={btnP} onClick={doMove} disabled={busy || !moveTo}>Record the move</button>
+        </Card>
+      ) : null}
+
+      {coordinator ? (
+        <Card style={{ marginBottom: 14 }}>
+          <SHead>Mentor</SHead>
+          <div style={{ fontSize: 12.5, color: "#333", marginBottom: 12, lineHeight: 1.5 }}>
+            {mentor
+              ? <>Mentored by <strong>{mentor.profiles?.full_name || "a team member"}</strong>{mentor.profiles?.role ? " (" + (mentor.profiles.role === "RC" ? "Coordinator" : "Team member") + ")" : ""}, since {niceDate(mentor.assigned_on)}.</>
+              : "No mentor assigned yet."}
+          </div>
+          <Field label={mentor ? "Change the mentor to" : "Assign a mentor"}>
+            <select style={sel} value={assignTo} onChange={(e) => setAssignTo(e.target.value)}>
+              <option value="">Choose someone from this chapter</option>
+              {mentorOptions.map((o) => (
+                <option key={o.profile_id} value={o.profile_id}>
+                  {o.full_name} ({o.role === "RC" ? "Coordinator" : "Team member"})
+                </option>
+              ))}
+            </select>
+          </Field>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button style={btnP} onClick={doAssignMentor} disabled={busy || !assignTo}>
+              {mentor ? "Change mentor" : "Assign mentor"}
+            </button>
+            {mentor ? (
+              <button style={{ ...btnG, color: B.red, borderColor: B.red }} onClick={doEndMentorship} disabled={busy}>
+                End mentorship
+              </button>
+            ) : null}
+          </div>
         </Card>
       ) : null}
 
@@ -336,7 +479,7 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
                         : "Given " + niceDate(c.granted_on) + (c.granted_by ? " by " + c.granted_by : "") + (c.document_ref ? " · " + c.document_ref : "")}
                     </div>
                   </div>
-                  {!gone && canEdit ? (
+                  {!gone && coordinator ? (
                     <button style={{ ...btnG, color: B.red, borderColor: B.red, flexShrink: 0 }} onClick={() => withdraw(c.id)} disabled={busy}>
                       Withdraw
                     </button>
@@ -376,16 +519,47 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
       </Card>
 
       <Card>
-        <SHead>Programmes attended</SHead>
-        {attendance.length === 0 ? (
-          <div style={{ fontSize: 12.5, color: B.muted }}>Nothing recorded yet.</div>
+        <SHead>{canEdit ? "Attendance" : "Programmes attended"}</SHead>
+        {canEdit ? (
+          chapterProgs.length === 0 ? (
+            <div style={{ fontSize: 12.5, color: B.muted }}>No dated programmes in this chapter yet, so there is nothing to mark against.</div>
+          ) : (
+            <>
+              <div style={{ fontSize: 11.5, color: B.muted, marginBottom: 10, lineHeight: 1.55 }}>
+                Mark this young person present at a dated chapter programme, or take it back off. One tap saves it.
+              </div>
+              {chapterProgs.map((pr, i) => {
+                const here = attendedIds.has(pr.id);
+                return (
+                  <div key={pr.id} style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", padding: "9px 0", borderBottom: i === chapterProgs.length - 1 ? "none" : "1px solid " + B.offWhite }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 700, color: B.black, fontFamily: "'Montserrat',sans-serif" }}>{pr.title || "A programme"}</div>
+                      <div style={{ fontSize: 11.5, color: B.muted, marginTop: 2 }}>{niceDate(pr.date)}</div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                      {here ? (
+                        <span style={{ background: B.green, color: B.white, padding: "2px 9px", borderRadius: 20, fontSize: 10.5, fontWeight: 700, fontFamily: "'Montserrat',sans-serif" }}>Present</span>
+                      ) : null}
+                      <button style={{ ...btnG, flexShrink: 0 }} onClick={() => toggleAttendance(pr.id, !here)} disabled={busy}>
+                        {here ? "Mark absent" : "Mark present"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )
         ) : (
-          attendance.map((a, i) => (
-            <div key={i} style={{ fontSize: 12.5, color: "#333", padding: "6px 0", borderBottom: i === attendance.length - 1 ? "none" : "1px solid " + B.offWhite }}>
-              {a.programs?.title || "A programme"}
-              <span style={{ color: B.muted, fontSize: 11.5 }}> · {niceDate(a.attended_on)}</span>
-            </div>
-          ))
+          attendance.length === 0 ? (
+            <div style={{ fontSize: 12.5, color: B.muted }}>Nothing recorded yet.</div>
+          ) : (
+            attendance.map((a, i) => (
+              <div key={i} style={{ fontSize: 12.5, color: "#333", padding: "6px 0", borderBottom: i === attendance.length - 1 ? "none" : "1px solid " + B.offWhite }}>
+                {a.programs?.title || "A programme"}
+                <span style={{ color: B.muted, fontSize: 11.5 }}> · {niceDate(a.attended_on)}</span>
+              </div>
+            ))
+          )
         )}
       </Card>
     </>
@@ -405,7 +579,7 @@ export default function ParticipantsSection({ profile, chapters, showToast }) {
   const [adding, setAdding] = useState(false);
   const [openId, setOpenId] = useState(null);
 
-  const canAdd = profile.is_admin || profile.role === "RC";
+  const canAdd = canAddParticipant(profile);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -455,9 +629,17 @@ export default function ParticipantsSection({ profile, chapters, showToast }) {
     n: summary.filter((r) => r.stage === s).reduce((a, r) => a + r.people, 0),
   }));
 
+  const chapterOverview = showsChapterOverview(profile);
+
   return (
     <>
-      {withdrawals.length > 0 ? (
+      {!chapterOverview ? (
+        <p style={{ margin: "0 0 14px", fontSize: 12.5, color: B.muted, lineHeight: 1.6 }}>
+          The young people you added or currently mentor. You will not see the rest of the chapter here.
+        </p>
+      ) : null}
+
+      {chapterOverview && withdrawals.length > 0 ? (
         <div style={{ background: B.redLight, border: "1px solid " + B.red, borderRadius: 8, padding: "12px 14px", marginBottom: 14, fontSize: 12.5, color: "#8b0a1c", lineHeight: 1.55 }}>
           <strong>{withdrawals.length} consent {withdrawals.length === 1 ? "withdrawal needs" : "withdrawals need"} acting on.</strong>
           <div style={{ marginTop: 6 }}>
@@ -470,9 +652,11 @@ export default function ParticipantsSection({ profile, chapters, showToast }) {
         </div>
       ) : null}
 
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
-        {totals.map((t) => <StatCard key={t.stage} label={t.stage} value={t.n} accent={STAGE_COLOUR[t.stage]} />)}
-      </div>
+      {chapterOverview ? (
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
+          {totals.map((t) => <StatCard key={t.stage} label={t.stage} value={t.n} accent={STAGE_COLOUR[t.stage]} />)}
+        </div>
+      ) : null}
 
       <Card style={{ marginBottom: 14 }}>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
@@ -494,7 +678,7 @@ export default function ParticipantsSection({ profile, chapters, showToast }) {
       {matches.length === 0 ? (
         <Card style={{ textAlign: "center", padding: 30, color: B.muted, fontSize: 13, lineHeight: 1.6 }}>
           {people.length === 0
-            ? "No participants recorded yet. Once young people are added here, the pathway stops being a page of theory and starts being a record of who is actually moving."
+            ? participantsEmptyCopy(profile)
             : "Nobody matches that."}
         </Card>
       ) : (
