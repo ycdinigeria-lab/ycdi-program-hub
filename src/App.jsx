@@ -31,6 +31,7 @@ const SpiritualSection = lazy(() => import("./sections/SpiritualSection.jsx"));
 const ProgrammesSection = lazy(() => import("./sections/programmes/ProgrammesSection.jsx"));
 const PrayerManualSection = lazy(() => import("./sections/PrayerManualSection.jsx"));
 const DirectorySection = lazy(() => import("./sections/DirectorySection.jsx"));
+const ReportsSection = lazy(() => import("./sections/ReportsSection.jsx"));
 
 export function SectionLoading() {
   return (
@@ -214,6 +215,7 @@ export default function App() {
     if (section === "spiritual") return "Spiritual Ministry Framework";
     if (section === "prayer") return "Prayer Manual";
     if (section === "directory") return "People Directory";
+    if (section === "reports") return "Reports";
     if (section === "more") return moreView ? moreFeatureTitle(moreView) : "More";
     return profile.role === "NC" ? "National Overview" : profile.chapter_name + " Chapter";
   }
@@ -261,6 +263,7 @@ export default function App() {
         const TABS = [
           { id: "home", label: "Dashboard", short: "Dashboard" },
           { id: "programmes", label: "Programme Operations", short: "Programmes" },
+          { id: "reports", label: "Reports", short: "Reports" },
           { id: "spiritual", label: "Spiritual Ministry", short: "Spiritual" },
           { id: "prayer", label: "Prayer Manual", short: "Prayer" },
           { id: "directory", label: "Directory", short: "Directory" },
@@ -408,6 +411,7 @@ export default function App() {
             {section === "spiritual" ? <SpiritualSection profile={profile} showToast={showToast} /> : null}
             {section === "prayer" ? <PrayerManualSection /> : null}
             {section === "directory" ? <DirectorySection profile={profile} chapters={chapters} showToast={showToast} /> : null}
+            {section === "reports" ? <ReportsSection profile={profile} chapters={chapters} showToast={showToast} /> : null}
             {section === "more" ? <MoreSection profile={profile} chapters={chapters} showToast={showToast} view={moreView} setView={setMoreView} /> : null}
           </Suspense>
         </ErrorBoundary>
