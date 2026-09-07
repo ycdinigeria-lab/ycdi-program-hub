@@ -139,10 +139,14 @@ export default function DashboardSection({ profile, chapters, onOpenProgram, onN
 
       {!showsProgrammes ? (
         <Card>
-          <SHead>Where to go</SHead>
+          <SHead>Your reports</SHead>
           <div style={{ fontSize: 13, color: B.muted, lineHeight: 1.6 }}>
-            Programme operations belong to the coordinators, so there are no programme figures here for you.
-            Spiritual Ministry, the Prayer Manual, the Directory and everything under More are all open to you.
+            When you run an outreach, file a report here and it goes to your RC.
+            Got an idea you would like the chapter to back? Send a concept note the same way.
+            Spiritual Ministry, the Prayer Manual, the Directory and everything under More are open to you too.
+          </div>
+          <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button onClick={() => onNavigate("reports")} style={{ ...btnP, padding: "9px 18px", fontSize: 13 }}>File a report</button>
           </div>
         </Card>
       ) : loading ? (
