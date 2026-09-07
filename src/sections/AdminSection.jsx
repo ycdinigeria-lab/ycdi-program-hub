@@ -1,10 +1,105 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../lib/supabase.js";
-import { B, btnG } from "../theme.js";
-import { Card } from "../components/ui.jsx";
+import { B, btnG, btnP, inp } from "../theme.js";
+import { Card, Field } from "../components/ui.jsx";
 import CrashLog from "./CrashLog.jsx";
+import { validateChapterName, cleanChapterName } from "../lib/chapters.js";
 
 const ROLE_LABEL = { NC: "National Coordinator", RC: "Regional Coordinator", TM: "Team Member" };
+
+// ------------------------------------------------------------
+// Chapters: add and rename, admin only
+// ------------------------------------------------------------
+// The database has let admins manage chapters since the lock-down
+// migration, and a trigger gives each new one its messaging channel. This
+// is only the screen for it. Removing a chapter is left out on purpose: a
+// chapter with people, programmes or applications behind it is not
+// something to drop from a button.
+function ChaptersPanel({ showToast }) {
+  const [chapters, setChapters] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [newName, setNewName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [editName, setEditName] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase.from("chapters").select("id, name").order("name");
+    if (error) showToast("Could not load chapters: " + error.message, "error");
+    setChapters(data || []);
+    setLoading(false);
+  }, [showToast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function add() {
+    const problem = validateChapterName(newName, chapters);
+    if (problem) { showToast(problem, "error"); return; }
+    setBusy(true);
+    const { error } = await supabase.from("chapters").insert({ name: cleanChapterName(newName) });
+    setBusy(false);
+    if (error) { showToast(error.message, "error"); return; }
+    setNewName("");
+    showToast("Chapter added. Its messaging channel is set up automatically.");
+    load();
+  }
+
+  async function saveEdit() {
+    const problem = validateChapterName(editName, chapters, editId);
+    if (problem) { showToast(problem, "error"); return; }
+    setBusy(true);
+    const { error } = await supabase.from("chapters").update({ name: cleanChapterName(editName) }).eq("id", editId);
+    setBusy(false);
+    if (error) { showToast(error.message, "error"); return; }
+    setEditId(null); setEditName("");
+    showToast("Chapter renamed.");
+    load();
+  }
+
+  if (loading) return <div style={{ padding: 30, textAlign: "center", color: B.muted, fontSize: 13 }}>Loading chapters…</div>;
+
+  return (
+    <>
+      <Card style={{ background: B.blueLight, borderColor: B.blue + "30", marginBottom: 18 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: B.blueDark, fontFamily: "'Montserrat',sans-serif", marginBottom: 4 }}>Chapters</div>
+        <p style={{ margin: 0, fontSize: 12, color: B.muted, lineHeight: 1.7 }}>
+          Add a new chapter or fix the spelling of one. A new chapter gets its own messaging channel straight away, and renaming one renames its channel. Removing a chapter is not done from here, since it may already have people and programmes behind it. Ask for that to be handled directly if it is ever needed.
+        </p>
+      </Card>
+
+      <Card style={{ marginBottom: 18 }}>
+        <Field label="Add a chapter">
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <input style={{ ...inp, flex: "1 1 180px" }} value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Chapter name, for example Ibadan" />
+            <button style={btnP} onClick={add} disabled={busy || !newName.trim()}>Add chapter</button>
+          </div>
+        </Field>
+      </Card>
+
+      {chapters.length === 0 ? (
+        <Card style={{ textAlign: "center", padding: "26px 20px", fontSize: 13, color: B.muted }}>No chapters yet.</Card>
+      ) : (
+        chapters.map((c) => (
+          <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: B.white, border: "1px solid " + B.border, borderRadius: 10, marginBottom: 8, flexWrap: "wrap" }}>
+            {editId === c.id ? (
+              <>
+                <input style={{ ...inp, flex: "1 1 180px" }} value={editName} onChange={(e) => setEditName(e.target.value)} />
+                <button style={btnP} onClick={saveEdit} disabled={busy}>Save</button>
+                <button style={btnG} onClick={() => { setEditId(null); setEditName(""); }}>Cancel</button>
+              </>
+            ) : (
+              <>
+                <span style={{ flex: "1 1 180px", fontFamily: "'Montserrat',sans-serif", fontWeight: 700, fontSize: 13.5, color: B.black }}>{c.name}</span>
+                <button style={btnG} onClick={() => { setEditId(c.id); setEditName(c.name); }}>Rename</button>
+              </>
+            )}
+          </div>
+        ))
+      )}
+    </>
+  );
+}
 
 export default function AdminSection({ profile, showToast }) {
   const [rows, setRows] = useState([]);
@@ -68,10 +163,13 @@ export default function AdminSection({ profile, showToast }) {
     <div>
       <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 18 }}>
         {tabBtn("admins", "Admins")}
+        {tabBtn("chapters", "Chapters")}
         {tabBtn("crashes", "Crash log")}
       </div>
 
-      {tab === "crashes" ? <CrashLog showToast={showToast} /> : (
+      {tab === "crashes" ? <CrashLog showToast={showToast} />
+       : tab === "chapters" ? <ChaptersPanel showToast={showToast} />
+       : (
       <>
       <Card style={{ background: B.blueLight, borderColor: B.blue + "30", marginBottom: 18 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: B.blueDark, fontFamily: "'Montserrat',sans-serif", marginBottom: 4 }}>Manage Admins</div>

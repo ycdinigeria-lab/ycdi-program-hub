@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase.js";
 import { B, GFONTS, inp, sel, ta, btnP } from "../theme.js";
 import { Card, Field, YCDILogo } from "../components/ui.jsx";
+import { COUNTRIES, subdivisionsFor, hasSubdivisions } from "../data/locations.js";
 import { A11Y_CSS, srOnly } from "../lib/a11y.js";
 import { ROLE_KINDS, roleKind, validate } from "../lib/application.js";
 
@@ -31,6 +32,8 @@ const BLANK = {
   email: "",
   home_address: "",
   address_since: "",
+  country: "Nigeria",
+  state: "",
   occupation: "",
   employment_history: "",
   youth_experience: "",
@@ -208,6 +211,23 @@ export default function ApplyScreen() {
             <option value="">I am not sure</option>
             {chapters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
+        </Field>
+
+        <Field label="Country">
+          <select name="country" style={sel} value={form.country} onChange={(e) => setForm((f) => ({ ...f, country: e.target.value, state: "" }))}>
+            {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </Field>
+
+        <Field label={hasSubdivisions(form.country) ? "State" : "State, province or region"}>
+          {hasSubdivisions(form.country) ? (
+            <select name="state" style={sel} value={form.state} onChange={(e) => set("state", e.target.value)}>
+              <option value="">Choose your state</option>
+              {subdivisionsFor(form.country).map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          ) : (
+            <input name="state" style={inp} value={form.state} onChange={(e) => set("state", e.target.value)} placeholder="Where in the country you live" />
+          )}
         </Field>
 
         <Field label="Home address">
