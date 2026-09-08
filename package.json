@@ -1,6 +1,6 @@
 {
   "name": "ycdi-program-hub",
-  "version": "2.23.1",
+  "version": "2.24.0",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

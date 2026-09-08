@@ -269,6 +269,53 @@ function RCPanel({ row, reload, showToast, onClose }) {
   );
 }
 
+// Lets an RC send a gentle prompt to a team member who has gone quiet.
+function NudgePicker({ showToast }) {
+  const [members, setMembers] = useState(null);
+  const [pick, setPick] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  async function loadMembers() {
+    setOpen(true);
+    const { data, error } = await supabase.rpc("chapter_team_members");
+    if (error) { showToast(error.message, "error"); return; }
+    setMembers(data || []);
+  }
+  async function nudge() {
+    if (!pick) return;
+    setBusy(true);
+    const { error } = await supabase.rpc("nudge_member", { target: pick });
+    if (error) { showToast(error.message, "error"); setBusy(false); return; }
+    showToast("Nudge sent.");
+    setPick(""); setBusy(false);
+  }
+
+  return (
+    <Card>
+      <SHead>Nudge a team member</SHead>
+      {!open ? (
+        <div style={{ marginTop: 8 }}>
+          <p style={{ margin: "0 0 10px", fontSize: 13, color: B.muted, lineHeight: 1.6 }}>Send a gentle prompt to someone who has gone quiet this term.</p>
+          <button style={btnG} onClick={loadMembers}>Choose someone</button>
+        </div>
+      ) : members === null ? (
+        <div style={{ marginTop: 8, fontSize: 13, color: B.muted }}>Loading…</div>
+      ) : members.length === 0 ? (
+        <div style={{ marginTop: 8, fontSize: 13, color: B.muted }}>No team members in your chapter yet.</div>
+      ) : (
+        <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <select style={{ ...sel, width: "auto", minWidth: 170 }} value={pick} onChange={(e) => setPick(e.target.value)}>
+            <option value="">Select a team member…</option>
+            {members.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+          </select>
+          <button style={btnP} disabled={busy || !pick} onClick={nudge}>Send nudge</button>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 function RCView({ rows, reload, showToast }) {
   const [openId, setOpenId] = useState(null);
   const waiting = rows.filter((r) => r.status === "submitted");
@@ -296,6 +343,8 @@ function RCView({ rows, reload, showToast }) {
           </Card>
         ))}
       </div>
+
+      <NudgePicker showToast={showToast} />
 
       {rest.length ? (
         <div>
@@ -390,6 +439,42 @@ function NCPanel({ row, chapterName, reload, showToast, onClose }) {
   );
 }
 
+// Which chapters have gone quiet. Reads the NC-only quiet_chapters call.
+function QuietChapters({ showToast }) {
+  const [rows, setRows] = useState(null);
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      const { data, error } = await supabase.rpc("quiet_chapters");
+      if (!live) return;
+      if (error) { showToast(error.message, "error"); return; }
+      setRows(data || []);
+    })();
+    return () => { live = false; };
+  }, [showToast]);
+  if (rows === null) return null;
+  const QUIET_DAYS = 45;
+  const isQuiet = (r) => !r.last_reported || (Date.now() - new Date(r.last_reported).getTime()) > QUIET_DAYS * 86400000;
+  const quiet = rows.filter(isQuiet);
+  return (
+    <div>
+      <div style={{ fontFamily: "'Montserrat',sans-serif", fontWeight: 700, fontSize: 13, color: B.black, marginBottom: 8 }}>Chapters that have gone quiet</div>
+      {quiet.length === 0 ? (
+        <Card><p style={{ margin: 0, fontSize: 13, color: B.muted }}>Every chapter has filed something recently. Nothing to chase.</p></Card>
+      ) : (
+        <Card>
+          {quiet.map((r, i) => (
+            <div key={r.chapter_id} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "7px 0", borderBottom: i < quiet.length - 1 ? `1px solid ${B.offWhite}` : "none", fontSize: 13 }}>
+              <span style={{ fontWeight: 600 }}>{r.chapter_name}</span>
+              <span style={{ color: B.muted }}>{r.last_reported ? "Last reported " + niceDate(r.last_reported) : "No reports yet"}</span>
+            </div>
+          ))}
+        </Card>
+      )}
+    </div>
+  );
+}
+
 function NCView({ rows, reload, showToast, chapterName }) {
   const [openId, setOpenId] = useState(null);
   const waiting = rows.filter((r) => r.status === "forwarded" || r.status === "submitted");
@@ -417,6 +502,8 @@ function NCView({ rows, reload, showToast, chapterName }) {
           </Card>
         ))}
       </div>
+
+      <QuietChapters showToast={showToast} />
 
       {done.length ? (
         <div>

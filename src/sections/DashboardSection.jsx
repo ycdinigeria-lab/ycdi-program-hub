@@ -42,6 +42,81 @@ function Chip({ label, count, on, onClick }) {
   );
 }
 
+// A small rotating set of KJV lines with a plain reading under each, so a
+// team member has a reason to open the app on a day with nothing to file.
+// KJV is the standard across YCDI; the plain line is for younger readers.
+const VERSES = [
+  { ref: "1 Timothy 4:12", kjv: "Let no man despise thy youth; but be thou an example of the believers, in word, in conversation, in charity, in spirit, in faith, in purity.", plain: "Do not let anyone look down on you for being young. Let the way you live show others what following Jesus looks like." },
+  { ref: "Galatians 6:9", kjv: "And let us not be weary in well doing: for in due season we shall reap, if we faint not.", plain: "Do not get tired of doing good. The harvest comes if you do not give up." },
+  { ref: "Joshua 1:9", kjv: "Be strong and of a good courage; be not afraid, neither be thou dismayed: for the LORD thy God is with thee whithersoever thou goest.", plain: "Be strong and brave. Do not be afraid, because God is with you wherever you go." },
+  { ref: "Colossians 3:23", kjv: "And whatsoever ye do, do it heartily, as to the Lord, and not unto men.", plain: "Whatever you do, put your heart into it, as if you are doing it for God and not only for people." },
+  { ref: "Matthew 5:16", kjv: "Let your light so shine before men, that they may see your good works, and glorify your Father which is in heaven.", plain: "Live so your good works are seen, and people give glory to God because of them." },
+  { ref: "Philippians 4:13", kjv: "I can do all things through Christ which strengtheneth me.", plain: "With Christ giving me strength, I can face whatever comes." },
+  { ref: "Proverbs 3:5", kjv: "Trust in the LORD with all thine heart; and lean not unto thine own understanding.", plain: "Trust God completely, and do not rely only on your own thinking." },
+  { ref: "1 Corinthians 15:58", kjv: "Therefore, my beloved brethren, be ye stedfast, unmoveable, always abounding in the work of the Lord, forasmuch as ye know that your labour is not in vain in the Lord.", plain: "Stand firm, give yourself fully to God's work, because with him your effort is never wasted." },
+];
+function todaysVerse() {
+  const start = new Date(new Date().getFullYear(), 0, 0);
+  const day = Math.floor((Date.now() - start) / 86400000);
+  return VERSES[day % VERSES.length];
+}
+function firstName(full) { return (full || "").trim().split(/\s+/)[0] || "there"; }
+function partOfDay() { const h = new Date().getHours(); return h < 12 ? "morning" : h < 17 ? "afternoon" : "evening"; }
+
+function TmStat({ label, value }) {
+  return (
+    <div style={{ flex: "1 1 130px", minWidth: 0, background: B.white, border: `1px solid ${B.border}`, borderRadius: 10, padding: "14px 16px" }}>
+      <div style={{ fontSize: 24, fontWeight: 700, fontFamily: "'Montserrat',sans-serif", color: B.blue }}>{value ?? "—"}</div>
+      <div style={{ fontSize: 11.5, color: B.muted, marginTop: 2, lineHeight: 1.4 }}>{label}</div>
+    </div>
+  );
+}
+
+// The team member's home. Their chapter as plain totals, their own part in
+// it, one clear action, and a verse. No programme list, no register.
+function TeamMemberHome({ profile, pulse, contrib, loading, onNavigate }) {
+  const v = todaysVerse();
+  return (
+    <div style={{ display: "grid", gap: 16 }}>
+      <div>
+        <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "'Montserrat',sans-serif", color: B.black }}>
+          Good {partOfDay()}, {firstName(profile.full_name)}
+        </div>
+        <div style={{ fontSize: 12.5, color: B.muted, marginTop: 2 }}>{profile.chapter_name} chapter</div>
+      </div>
+
+      <Card>
+        <SHead>Your chapter this year</SHead>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+          <TmStat label="Programmes running now" value={loading ? null : pulse?.programmes_active} />
+          <TmStat label="Outreaches this year" value={loading ? null : pulse?.outreaches_year} />
+          <TmStat label="Young people reached this year" value={loading ? null : pulse?.young_people_year} />
+          <TmStat label="Coming up" value={loading ? null : pulse?.upcoming} />
+        </div>
+      </Card>
+
+      <Card>
+        <SHead>Your part in it</SHead>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+          <TmStat label="Reports you have filed" value={loading ? null : contrib?.reports_filed} />
+          <TmStat label="Acknowledged by the NC" value={loading ? null : contrib?.reports_acknowledged} />
+          <TmStat label="Young people you mentor" value={loading ? null : contrib?.mentees} />
+        </div>
+        <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button onClick={() => onNavigate("reports")} style={{ ...btnP, padding: "9px 18px", fontSize: 13 }}>File a report</button>
+          <button onClick={() => onNavigate("reports")} style={{ background: "none", border: `1px solid ${B.border}`, borderRadius: 6, padding: "8px 16px", fontSize: 12, color: B.muted, cursor: "pointer", fontFamily: "'Open Sans',sans-serif" }}>See your reports</button>
+        </div>
+      </Card>
+
+      <Card>
+        <div style={{ fontSize: 14, color: B.black, lineHeight: 1.7, fontFamily: "Georgia, 'Gelasio', serif" }}>{v.kjv}</div>
+        <div style={{ fontSize: 12, color: B.blue, fontWeight: 700, marginTop: 6, fontFamily: "'Montserrat',sans-serif" }}>{v.ref} (KJV)</div>
+        <div style={{ fontSize: 12.5, color: B.muted, marginTop: 8, lineHeight: 1.6 }}>{v.plain}</div>
+      </Card>
+    </div>
+  );
+}
+
 export default function DashboardSection({ profile, chapters, onOpenProgram, onNavigate }) {
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading] = useState(profile.role !== "TM");
@@ -49,6 +124,25 @@ export default function DashboardSection({ profile, chapters, onOpenProgram, onN
   const [chapter, setChapter] = useState(null);
   const [query, setQuery] = useState("");
   const searchId = useId();
+  const [pulse, setPulse] = useState(null);
+  const [contrib, setContrib] = useState(null);
+  const [tmLoading, setTmLoading] = useState(profile.role === "TM");
+
+  useEffect(() => {
+    if (profile.role !== "TM") return;
+    let live = true;
+    (async () => {
+      const [{ data: p }, { data: c }] = await Promise.all([
+        supabase.rpc("chapter_pulse"),
+        supabase.rpc("my_contribution"),
+      ]);
+      if (!live) return;
+      setPulse(Array.isArray(p) ? p[0] : p);
+      setContrib(Array.isArray(c) ? c[0] : c);
+      setTmLoading(false);
+    })();
+    return () => { live = false; };
+  }, [profile.role]);
 
   // Team Members have no access to programme operations, so this screen
   // does not ask the database for them. An empty list would otherwise read
@@ -138,17 +232,7 @@ export default function DashboardSection({ profile, chapters, onOpenProgram, onN
       ) : null}
 
       {!showsProgrammes ? (
-        <Card>
-          <SHead>Your reports</SHead>
-          <div style={{ fontSize: 13, color: B.muted, lineHeight: 1.6 }}>
-            When you run an outreach, file a report here and it goes to your RC.
-            Got an idea you would like the chapter to back? Send a concept note the same way.
-            Spiritual Ministry, the Prayer Manual, the Directory and everything under More are open to you too.
-          </div>
-          <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button onClick={() => onNavigate("reports")} style={{ ...btnP, padding: "9px 18px", fontSize: 13 }}>File a report</button>
-          </div>
-        </Card>
+        <TeamMemberHome profile={profile} pulse={pulse} contrib={contrib} loading={tmLoading} onNavigate={onNavigate} />
       ) : loading ? (
         <Card style={{ textAlign: "center", padding: 30, color: B.muted, fontSize: 13 }}>Loading your dashboard…</Card>
       ) : (
