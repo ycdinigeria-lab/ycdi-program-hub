@@ -78,13 +78,6 @@ function TeamMemberHome({ profile, pulse, contrib, loading, onNavigate }) {
   const v = todaysVerse();
   return (
     <div style={{ display: "grid", gap: 16 }}>
-      <div>
-        <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "'Montserrat',sans-serif", color: B.black }}>
-          Good {partOfDay()}, {firstName(profile.full_name)}
-        </div>
-        <div style={{ fontSize: 12.5, color: B.muted, marginTop: 2 }}>{profile.chapter_name} chapter</div>
-      </div>
-
       <Card>
         <SHead>Your chapter this year</SHead>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
