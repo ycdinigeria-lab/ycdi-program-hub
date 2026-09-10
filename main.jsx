@@ -24,7 +24,7 @@ const B = {
 // Typography: Montserrat (headings) + Open Sans (body)
 // Loaded via Google Fonts in the style block
 
-const LOGO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAMgAAADUCAYAAADZTGx+AABNG0lEqVR4Xu1dB3gVVfJ/KTPz7r2UJIQQIJTQpYOCgIiKoooiKqKiuOquu/7Xdd11191FXVHkJCQHgYTQJSQkJCQhCS0JJaGE9F5IyfudmfvezNvZ2bwk5PN9PpnMzNszd+65p8s5REVR8AiC0JBBQR5CkLcqJFF/oYLn4w0C8NeqUPGzR6LBdjhFZ4X2JJkIf60KFT97qARRocIDVIKoUOEBKkFUqPAAFoOoBFGhwi1UC6JChQeoBFGhwgNUgqhQ4QEqQVSo8ACVICpUeIBKEBUqPCChAwRBcqgEUfGLxGCjeDi1PYLorZCuUQmiog8iwmKJitYIw1AiNMJQb0iM7P9Yk3AErQNPCl7StVaIMJJrUNzk2WVx5sk/twoVHUK0Uf97sk6ANC26OeZuSKurxESAJBS9kgy8YPo0LeZh6WY5LCAvQ6oWVytaIMGgWicVXcRgg/j3FKKUzA0SvCJMQS00z1Q3hHAvqNySK6bMs2uC9zfSv/xzq1DRISBBaGurUNgLX5L1xDLqcP27ShAVXYRKEBUqPEAliAoVHhCrF15CZUrXos+uVLKuCAbaKPh/R4iXrDcDixeU57ojqTS2QoKoWwqp6CKQIElEQROJoKJ6QzA/7L1i3buex0AkkfbKogG+mzy7IokG7MVibcKfW4WKDmGw3voSdoemaiyQjF2s3hANabk1rDcr3SAqyMBLsl4EHCzE1j4d/+fz66KkkDKkkLIkqL1YKroKPz8/n2CNLShIIwZ7W4JttqBYg3iEJ4RSzLSLN8p5DZ9Pd0R6Nv65VajoE1C3/VGhwgNUgqhQ4QEqQVSo8AAjYHcSqhJaBQAAAABJRU5ErkJggg==";
+const LOGO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAMgAAADUCAYAAADZTGx+AABNG0lEqVR4Xu1dB3gVVfJ/KTPz7r2UJIQQIJTQpYOCgIiKoooiKqKiuOquu/7Xdd11991FXVHkJCQHgYTQJSQkJCQhCS0JJaGE9F5IyfudmfvezNvZ2bwk5PN9PpnMzNszd+65p8s5REVR8AiC0JBBQR5CkLcqJFF/oYLn4w0C8NeqUPGzR6LBdjhFZ4X2JJkIf60KFT97qARRocIDVIKoUOEBKkFUqPAAFoOoBFGhwi1UC6JChQeoBFGhwgNUgqhQ4QEqQVSo8ACVICpUeIBKEBUqPCChAwRBcqgEUfGLxGCjeDi1PYLorZCuUQmiog8iwmKJitYIw1AiNMJQb0iM7P9Yk3AErQNPCl7StVaIMJJrUNzk2WVx5sk/twoVHUK0Uf97sk6ANC26OeZuSKurxESAJBS9kgy8YPo0LeZh6WY5LCAvQ6oWVytaIMGgWicVXcRgg/j3FKKUzA0SvCJMQS00z1Q3hHAvqNySK6bMs2uC9zfSv/xzq1DRISBBaGurUNgLX5L1xDLqcP27ShAVXYRKEBUqPEAliAoVHhCrF15CZUrXos+uVLKuCAbaKPh/R4iXrDcDixeU57ojqTS2QoKoWwqp6CKQIElEQROJoKJ6QzA/7L1i3buex0AkkfbKogG+mzy7IokG7MVibcKfW4WKDmGw3voSdoemaiyQjF2s3hANabk1rDcr3SAqyMBLsl4EHCzE1j4d/+fz66KkkDKkkLIkqL1YKroKPz8/n2CNLShIIwZ7W4JttqBYg3iEJ4RSzLSLN8p5DZ9Pd0R6Nv65VajoE1C3/VGhwgNUgqhQ4QEqQVSo8AAjYHcSqhJaBQAAAABJRU5ErkJggg==";
 
 // Real logo base64 from brand doc
 const LOGO_FULL = "iVBORw0KGgoAAAANSUhEUgAAAMgAAADUCAYAAADZTGx+AABNG0lEQVR4Xu1dB3gVVfJ/KTPz7r2UJIQQIJTQpYOCgIiKoooiKqKiuOquu/7Xdd11991FXVHkJCQHgYTQJSQkJCQhCS0JJaGE9F5IyfudmfvezNvZ2bwk5PN9PpnMzNszd+65p8s5REVR8AiC0JBBQR5CkLcqJFF/oYLn4w0C8NeqUPGzR6LBdjhFZ4X2JJkIf60KFT97qARRocIDVIKoUOEBKkFUqPAAFoOoBFGhwi1UC6JChQeoBFGhwgNUgqhQ4QEqQVSo8ACVICpUeIBKEBUqPCChAwRBcqgEUfGLxGCjeDi1PYLorZCuUQmiog8iwmKJitYIw1AiNMJQb0iM7P9Yk3AErQNPCl7StVaIMJJrUNzk2WVx5sk/twoVHUK0Uf97sk6ANC26OeZuSKurxESAJBS9kgy8YPo0LeZh6WY5LCAvQ6oWVytaIMGgWicVXcRgg/j3FKKUzA0SvCJMQS00z1Q3hHAvqNySK6bMs2uC9zfSv/xzq1DRISBBaGurUNgLX5L1xDLqcP27ShAVXYRKEBUqPEAliAoVHhCrF15CZUrXos+uVLKuCAbaKPh/R4iXrDcDixeU57ojqTS2QoKoWwqp6CKQIElEQROJoKJ6QzA/7L1i3buex0AkkfbKogG+mzy7IokG7MVibcKfW4WKDmGw3voSdoemaiyQjF2s3hANabk1rDcr3SAqyMBLsl4EHCzE1j4d/+fz66KkkDKkkLIkqL1YKroKPz8/n2CNLShIIwZ7W4JttqBYg3iEJ4RSzLSLN8p5DZ9Pd0R6Nv65VajoE1C3/VGhwgNUgqhQ4QEqQVSo8AAjYHcSqhJaBQAAAABJRU5ErkJggg==";
@@ -54,16 +54,16 @@ const SEED = [
 
 // ─── STATUS CONFIG ───────────────────────────────────────────────────────────
 const STATUS = {
-  Pending:  { bg: B.yellowLight, text: "#7a5c00", dot: B.yellow },
-  Approved: { bg: B.blueLight,   text: "#065f87", dot: B.blue },
-  Live:     { bg: "#E8F5E9",     text: "#1a6b2f", dot: "#2ecc71" },
-  Complete: { bg: B.offWhite,    text: B.muted,   dot: "#aaa" },
-  Returned: { bg: B.redLight,    text: "#8b0a1c", dot: B.red },
+  Pending: { bg: B.yellowLight, text: "#7a5c00", dot: B.yellow },
+  Approved: { bg: B.blueLight, text: "#065f87", dot: B.blue },
+  Live: { bg: "#E8F5E9", text: "#1a6b2f", dot: "#2ecc71" },
+  Complete: { bg: B.offWhite, text: B.muted, dot: "#aaa" },
+  Returned: { bg: B.redLight, text: "#8b0a1c", dot: B.red },
 };
 
 // ─── SHARED STYLES ───────────────────────────────────────────────────────────
 const fonts = `
-  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Open+Sans:wght@400;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Open+Sans:wght@400;600&display=swap');
 `;
 
 const inp = {
@@ -176,14 +176,16 @@ function Toast({ msg, type }) {
   );
 }
 
-// ─── LOGO SVG (drawn from brand guide colours) ───────────────────────────────
+// ─── LOGO (matches the website lockup: crest + maroon wordmark + uppercase grey subtitle) ───
 function YCDILogo({ height = 36, dark = false }) {
+  const title = dark ? B.white : "#25050A";
+  const sub = dark ? "rgba(255,255,255,0.7)" : "#8A8A8A";
   return (
-    <svg height={height} viewBox="0 0 220 60" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: "block" }}>
+    <svg height={height} viewBox="0 0 260 60" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: "block" }}>
       <circle cx="28" cy="30" r="26" fill={dark ? B.white : B.blue} />
       <text x="28" y="36" textAnchor="middle" fontSize="20" fontWeight="700" fontFamily="Montserrat, Arial, sans-serif" fill={dark ? B.blue : B.white}>Y</text>
-      <text x="68" y="24" fontSize="16" fontWeight="700" fontFamily="Montserrat, Arial, sans-serif" fill={dark ? B.white : B.blue}>YCDI</text>
-      <text x="68" y="42" fontSize="10" fontFamily="Open Sans, Arial, sans-serif" fill={dark ? "rgba(255,255,255,0.7)" : B.muted}>Young Christian Development Initiative</text>
+      <text x="68" y="25" fontSize="18" fontWeight="800" fontFamily="Montserrat, Arial, sans-serif" fill={title} letterSpacing="0.3">YCDI</text>
+      <text x="68" y="42" fontSize="9" fontWeight="600" fontFamily="Montserrat, Arial, sans-serif" fill={sub} letterSpacing="1.3">YOUNG CHRISTIAN DEVELOPMENT INITIATIVE</text>
     </svg>
   );
 }
@@ -191,7 +193,6 @@ function YCDILogo({ height = 36, dark = false }) {
 // ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
 function LoginScreen({ onLogin }) {
   const [selected, setSelected] = useState(null);
-
   return (
     <div style={{ minHeight: "100vh", background: B.blue, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Open Sans', Arial, sans-serif" }}>
       <style>{fonts}</style>
@@ -200,10 +201,8 @@ function LoginScreen({ onLogin }) {
           <YCDILogo height={52} dark />
           <div style={{ marginTop: 12, fontSize: 13, color: "rgba(255,255,255,0.65)", fontFamily: "'Open Sans', sans-serif" }}>Program Management Hub</div>
         </div>
-
         <div style={{ background: B.white, borderRadius: 14, padding: "28px 28px 24px", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}>
           <div style={{ fontSize: 13, color: B.muted, marginBottom: 16, fontFamily: "'Open Sans', sans-serif" }}>Select your account to sign in</div>
-
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
             {USERS.map(u => (
               <div key={u.id} onClick={() => setSelected(u.id)}
@@ -219,17 +218,14 @@ function LoginScreen({ onLogin }) {
               </div>
             ))}
           </div>
-
           <button onClick={() => selected && onLogin(USERS.find(u => u.id === selected))} disabled={!selected}
             style={{ ...btnPrimary, width: "100%", textAlign: "center", opacity: selected ? 1 : 0.4, fontSize: 14, padding: 12 }}>
             Sign In →
           </button>
-
           <div style={{ marginTop: 14, padding: "10px 14px", background: B.yellowLight, borderRadius: 6, fontSize: 11, color: "#7a5c00", fontFamily: "'Open Sans', sans-serif" }}>
             <strong>Demo prototype</strong> — passwords are not required in this version.
           </div>
         </div>
-
         <div style={{ textAlign: "center", marginTop: 20, fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
           © 2025 YCDI Nigeria · ycdinigeria@gmail.com · www.ycdi.org.ng
         </div>
@@ -293,7 +289,6 @@ function ProgramDetail({ program, onBack, onApprove, onReturn, onComplete, user 
           <div style={{ marginTop: 10, fontSize: 12, color: B.red }}>Please revise your concept note and resubmit.</div>
         </div>
       )}
-
       {program.status === "Returned" && !program.ncComment && (
         <div style={{ background: B.redLight, border: `1px solid ${B.red}40`, borderRadius: 10, padding: "12px 16px", marginBottom: 16, fontSize: 13, color: "#8b0a1c" }}>
           This program was returned for revision. Please update and resubmit.
@@ -427,6 +422,7 @@ function NewProgramForm({ user, onSubmit, onCancel }) {
     safeguardingLead: user.name, facilitators: user.name,
   });
   const set = (k, v) => setF(p => ({ ...p, [k]: v }));
+
   const canSubmit = f.title && f.date && f.students && f.school && f.objectives && f.budget && f.safeguardingLead;
 
   const tests = [
@@ -568,6 +564,7 @@ function NCDashboard({ programs, onView }) {
             </div>
           ))}
         </Card>
+
         <Card>
           <SectionHead>Students by chapter</SectionHead>
           {byChapter.sort((a, b) => b.n - a.n).map(({ c, n }) => (
@@ -697,20 +694,20 @@ export default function App() {
     <div style={{ fontFamily: "'Open Sans', Arial, sans-serif", background: B.offWhite, minHeight: "100vh" }}>
       <style>{fonts}</style>
 
-      {/* TOPBAR */}
-      <div style={{ background: B.blue, display: "flex", alignItems: "center", padding: "0 20px", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
-        <div style={{ padding: "12px 0", marginRight: 20, paddingRight: 20, borderRight: "1px solid rgba(255,255,255,0.2)" }}>
-          <YCDILogo height={38} dark />
+      {/* TOPBAR — matches the website header: white background, maroon wordmark, uppercase grey subtitle */}
+      <div style={{ background: B.white, borderBottom: `1px solid ${B.border}`, display: "flex", alignItems: "center", padding: "0 20px", position: "sticky", top: 0, zIndex: 100 }}>
+        <div style={{ padding: "12px 0", marginRight: 20, paddingRight: 20, borderRight: `1px solid ${B.border}` }}>
+          <YCDILogo height={38} />
         </div>
         <div style={{ flex: 1 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Avatar name={user.name} size={30} />
           <div>
-            <div style={{ fontSize: 12, color: B.white, fontWeight: 700, fontFamily: "'Montserrat', sans-serif", lineHeight: 1.2 }}>{user.name}</div>
-            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)" }}>{user.role === "NC" ? "National Coordinator" : `${user.chapter} Regional Coordinator`}</div>
+            <div style={{ fontSize: 12, color: B.black, fontWeight: 700, fontFamily: "'Montserrat', sans-serif", lineHeight: 1.2 }}>{user.name}</div>
+            <div style={{ fontSize: 10, color: B.muted }}>{user.role === "NC" ? "National Coordinator" : `${user.chapter} Regional Coordinator`}</div>
           </div>
           <button onClick={() => { setUser(null); setSelected(null); setNewMode(false); }}
-            style={{ background: "none", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 6, color: "rgba(255,255,255,0.7)", padding: "4px 12px", fontSize: 11, cursor: "pointer", fontFamily: "'Open Sans', sans-serif", marginLeft: 10 }}>
+            style={{ background: "none", border: `1px solid ${B.border}`, borderRadius: 6, color: B.muted, padding: "4px 12px", fontSize: 11, cursor: "pointer", fontFamily: "'Open Sans', sans-serif", marginLeft: 10 }}>
             Sign out
           </button>
         </div>
