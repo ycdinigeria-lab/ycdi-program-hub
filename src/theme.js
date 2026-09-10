@@ -1,29 +1,38 @@
 // YCDI brand tokens. Keep this file as the single source of truth for
 // colour and type so every screen stays visually consistent.
+//
+// Aligned to the public website (ycdinigeria.netlify.app) so the hub and
+// the site read as one YCDI. The website leads with a deep teal that
+// carries white type properly, and keeps the bright #09ADEA only as a
+// light accent. The hub now does the same: the lead blue below is that
+// teal, and the old bright blue survives as the light tint. Red, yellow
+// and the Montserrat / Open Sans pairing already matched the site and are
+// untouched. Neutrals warm slightly to match the site's paper and ink.
+//
+// Two deliberate near-misses, both noted inline: the page surface takes
+// the site's warm hero cream rather than its cooler section grey, and
+// muted text is held a shade darker than the site's #8A8B8F so the hub's
+// many small labels stay comfortably readable.
 
 export const B = {
-  blue: "#09ADEA", blueDark: "#0789BB", blueLight: "#E6F7FD",
+  // Lead teal (was #09ADEA). White type sits on it at ~6.5:1.
+  blue: "#075B7D", blueDark: "#054A66",
+  // Light accent tint, the site's --blue-tint (the bright-blue family).
+  blueLight: "#EAF6FC",
   red: "#D70A29", redLight: "#FDEAED",
   yellow: "#FCDE02", yellowLight: "#FFFDE6",
-  black: "#000001", offWhite: "#F2F2F2", white: "#FFFFFF",
-  muted: "#5a5a5a", border: "#DCDCDC",
+  // Warm ink and warm paper, matching the site's --ink and hero --cream.
+  black: "#2D0209", offWhite: "#FAF6F0", white: "#FFFFFF",
+  // Site muted is #8A8B8F; held at #6B6D72 for label readability.
+  muted: "#6B6D72", border: "#E7E8EA",
   purple: "#5B2D8E", purpleLight: "#F0E8FA",
   gold: "#BA7517", green: "#1a5c38",
-  // BATCH11-MARKER brand-deep
-  //
-  // The signed-out screens used to sit on a navy that was openly not a
-  // brand colour, chosen in Batch 9 because #09ADEA is far too light to
-  // carry white type. That reasoning still holds, so the fix is not to
-  // use the brand blue as it is. These two are the brand blue itself,
-  // hue 196 and saturation 93 held exactly, taken down in lightness
-  // until white type sits on them properly. Same colour, less light.
-  //
-  //   brandDeep     white on it 8.9:1, and 8.9:1 as type on white
-  //   brandDeepest  white on it 14.2:1, the surface behind the photograph
-  //
-  // Both were measured rather than judged by eye. #09ADEA as type on
-  // white is 2.6:1 and #0789BB is 4.0:1, which is why neither is used
-  // for words anywhere on these screens even though both are brand.
+  // Deep surfaces for the signed-out screens, where white type sits on a
+  // solid colour behind the photograph. Left unchanged by the alignment:
+  // they already sit in the deep-teal family and their white-on-colour
+  // contrast was measured (brandDeep 8.9:1, brandDeepest 14.2:1). The
+  // lead blue is now deep enough for type on its own, so these stay as the
+  // darker surfaces beneath it rather than a workaround for a light blue.
   brandDeep: "#04506C", brandDeepest: "#022F40",
 };
 
@@ -38,8 +47,8 @@ export const btnG = { background: "none", border: `1px solid ${B.border}`, borde
 
 export const STATUS_CFG = {
   Pending: { bg: "#FFFDE6", text: "#7a5c00", dot: B.yellow },
-  Approved: { bg: "#E6F7FD", text: "#065f87", dot: B.blue },
+  Approved: { bg: "#EAF6FC", text: "#065f87", dot: B.blue },
   Live: { bg: "#E8F5E9", text: "#1a6b2f", dot: "#2ecc71" },
-  Complete: { bg: "#F2F2F2", text: "#5a5a5a", dot: "#aaa" },
+  Complete: { bg: "#F1EEE9", text: "#6B6D72", dot: "#aaa" },
   Returned: { bg: "#FDEAED", text: "#8b0a1c", dot: B.red },
 };
