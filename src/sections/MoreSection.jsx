@@ -281,10 +281,10 @@ function FeatureCard({ f, onOpen }) {
   );
 }
 
-export default function MoreSection({ profile, chapters, showToast, view, setView }) {
-  // Admin-only cards are absent entirely for everyone else, the same
-  // pattern used for the Governance and Legal document category.
-  const visibleFeatures = MORE_FEATURES.filter((f) => {
+// Shared so the app shell (the sidebar) can offer a person exactly the
+// features they are allowed to open, using the same rule as the grid here.
+export function visibleMoreFeatures(profile) {
+  return MORE_FEATURES.filter((f) => {
     if (f.adminOnly && !profile.is_admin) return false;
     if (f.roles) {
       // Most cards let an admin in, because admin is how the hub gets
@@ -299,6 +299,12 @@ export default function MoreSection({ profile, chapters, showToast, view, setVie
     }
     return true;
   });
+}
+
+export default function MoreSection({ profile, chapters, showToast, view, setView }) {
+  // Admin-only cards are absent entirely for everyone else, the same
+  // pattern used for the Governance and Legal document category.
+  const visibleFeatures = visibleMoreFeatures(profile);
   const active = visibleFeatures.find((f) => f.id === view && !f.soon);
 
   if (active) {

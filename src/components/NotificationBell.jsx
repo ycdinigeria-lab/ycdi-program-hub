@@ -31,7 +31,7 @@ const DOT = {
   message: B.purple,
 };
 
-export default function NotificationBell({ onOpen, isMobile }) {
+export default function NotificationBell({ onOpen, isMobile, onLight }) {
   const [count, setCount] = useState(0);
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
@@ -124,8 +124,8 @@ export default function NotificationBell({ onOpen, isMobile }) {
         onClick={toggle}
         aria-label={count > 0 ? count + " unread notifications" : "Notifications"}
         style={{
-          background: open ? "rgba(255,255,255,0.2)" : "none",
-          border: "1px solid rgba(255,255,255,0.3)",
+          background: open ? (onLight ? B.offWhite : "rgba(255,255,255,0.2)") : "none",
+          border: "1px solid " + (onLight ? B.border : "rgba(255,255,255,0.3)"),
           borderRadius: 6,
           padding: "5px 9px",
           cursor: "pointer",
@@ -134,7 +134,7 @@ export default function NotificationBell({ onOpen, isMobile }) {
           flexShrink: 0,
         }}
       >
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={onLight ? "#4b5563" : "rgba(255,255,255,0.85)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
           <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
@@ -146,7 +146,7 @@ export default function NotificationBell({ onOpen, isMobile }) {
             padding: "0 5px",
             fontSize: 10, fontWeight: 700, lineHeight: "18px",
             fontFamily: "'Montserrat',sans-serif",
-            border: "2px solid " + B.blue,
+            border: "2px solid " + (onLight ? B.white : B.blue),
             boxSizing: "content-box",
           }}>
             {count > 99 ? "99+" : count}

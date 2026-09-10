@@ -10,7 +10,7 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import NotificationBell from "./components/NotificationBell.jsx";
 import { useOnline } from "./useOnline.js";
 import { humanise } from "./lib/errors.js";
-import MoreSection, { moreFeatureTitle } from "./sections/MoreSection.jsx";
+import MoreSection, { moreFeatureTitle, visibleMoreFeatures } from "./sections/MoreSection.jsx";
 import { onUpdateReady, applyUpdate } from "./lib/pwa.js";
 import { arrivedForPasswordRecovery, hasAuthCallback, authLinkError, clearAuthCallbackFromUrl } from "./lib/authCallback.js";
 import SetPasswordScreen from "./auth/SetPasswordScreen.jsx";
@@ -220,8 +220,113 @@ export default function App() {
     return profile.role === "NC" ? "National Overview" : profile.chapter_name + " Chapter";
   }
 
+  // ---- Navigation model (sidebar on desktop, tabs + More on mobile) -----
+  // BATCH-UI sidebar-shell
+  // Every entry routes into a section or a More feature that already
+  // exists, so this changes how people move around, not what they land on.
+  // Which features a person is offered comes from the same rule the More
+  // grid uses, so nobody sees a door the database would refuse to open.
+  const CORE_ICONS = {
+    home: "M12 3 2 12h3v8h5v-5h4v5h5v-8h3z",
+    programmes: "M9 4h6a2 2 0 0 1 2 2v1h4a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h4V6a2 2 0 0 1 2-2m0 3h6V6H9z",
+    reports: "M6 2h8l6 6v14H6zm8 1.5V8h4.5zM9 12h6v1.7H9zm0 3.4h6v1.7H9z",
+    spiritual: "M12 6C9.5 3.5 5 3.6 3 4.4V19c2-.8 6.5-.9 9 1.6 2.5-2.5 7-2.4 9-1.6V4.4c-2-.8-6.5-.9-9 1.6z",
+    prayer: "M12 2c1 4 5 5 5 9a5 5 0 0 1-10 0c0-3 2-4 3-6 .8 1 .8 2 .8 3 1-1 1.2-3 1.2-6z",
+    directory: "M12 12a4 4 0 100-8 4 4 0 000 8zm-8 9a8 8 0 0116 0v1H4zm14.5-9a3 3 0 100-6 3 3 0 000 6zM19 13c2.5 0 4 1.8 4 4v1h-3.2v-1c0-1.6-.6-3-1.6-4z",
+    profile: "M12 12a4 4 0 100-8 4 4 0 000 8zm-8 9a8 8 0 0116 0v1H4z",
+    signout: "M10 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4v-2H6V5h4zm6.2 4-1.4 1.4L17.2 11H9v2h8.2l-2.4 2.6L16.2 17l4.8-5z",
+    dots: "M6 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z",
+  };
+
+  const roleLine =
+    (profile.role === "NC" ? "National Coordinator"
+      : profile.role === "TM" ? profile.chapter_name + " Team Member"
+      : profile.chapter_name + " RC")
+    + (profile.is_admin ? " \u00b7 Admin" : "");
+
+  const feats = visibleMoreFeatures(profile);
+  const feat = (id) => feats.find((f) => f.id === id && !f.soon);
+  const clean = (arr) => arr.filter(Boolean);
+  const coreItem = (id, label, icon, show = true) =>
+    show ? { key: id, label, icon, onClick: () => goToSection(id), active: section === id && !moreView } : null;
+  const moreItem = (id) => {
+    const f = feat(id);
+    return f
+      ? { key: "more:" + id, label: f.title, icon: f.icon, onClick: () => navigateFromDashboard("more", id), active: section === "more" && moreView === id }
+      : null;
+  };
+
+  const navGroups = [
+    { items: clean([coreItem("home", "Overview", CORE_ICONS.home)]) },
+    { label: "Programmes", items: clean([
+      coreItem("programmes", "Programme Operations", CORE_ICONS.programmes, profile.role !== "TM"),
+      coreItem("reports", "Reports", CORE_ICONS.reports),
+      moreItem("attendance"),
+    ]) },
+    { label: "People", items: clean([
+      moreItem("participants"), moreItem("volunteers"), moreItem("applications"),
+      coreItem("directory", "Directory", CORE_ICONS.directory),
+    ]) },
+    { label: "Spiritual life", items: clean([
+      coreItem("spiritual", "Spiritual Ministry", CORE_ICONS.spiritual),
+      coreItem("prayer", "Prayer Manual", CORE_ICONS.prayer),
+    ]) },
+    { label: "Communication", items: clean([
+      moreItem("calendar"), moreItem("messaging"), moreItem("documents"),
+    ]) },
+    { label: "Safeguarding & compliance", items: clean([
+      moreItem("safeguarding"), moreItem("renewals"), moreItem("kpi"),
+    ]) },
+    { label: "Administration", items: clean([
+      moreItem("admin"), moreItem("audit"),
+    ]) },
+  ].filter((g) => g.items.length);
+
+  const footerItems = clean([moreItem("profile")]);
+  const signOutItem = { key: "signout", label: "Sign out", icon: CORE_ICONS.signout, onClick: signOut, active: false };
+
+  const bottomTabs = clean([
+    { key: "home", label: "Home", icon: CORE_ICONS.home, onClick: () => goToSection("home"), active: section === "home" && !moreView },
+    { key: "reports", label: "Reports", icon: CORE_ICONS.reports, onClick: () => goToSection("reports"), active: section === "reports" && !moreView },
+    feat("calendar") && { key: "calendar", label: "Calendar", icon: feat("calendar").icon, onClick: () => navigateFromDashboard("more", "calendar"), active: section === "more" && moreView === "calendar" },
+    feat("messaging") && { key: "messaging", label: "Messages", icon: feat("messaging").icon, onClick: () => navigateFromDashboard("more", "messaging"), active: section === "more" && moreView === "messaging" },
+    { key: "more", label: "More", icon: CORE_ICONS.dots, onClick: () => goToSection("more"), active: section === "more" && moreView !== "calendar" && moreView !== "messaging" },
+  ]);
+
+  const navRow = (it) => (
+    <button key={it.key} onClick={it.onClick} aria-current={it.active ? "page" : undefined}
+      style={{ display: "flex", alignItems: "center", gap: 11, width: "100%", textAlign: "left", background: it.active ? B.blue : "none", color: it.active ? B.white : "#3a4150", border: "none", borderRadius: 9, padding: "9px 11px", cursor: "pointer", fontFamily: "'Open Sans',sans-serif", fontSize: 13.5, fontWeight: 600, marginBottom: 2 }}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill={it.active ? B.white : "#6a7280"} aria-hidden="true" style={{ flexShrink: 0 }}><path d={it.icon} /></svg>
+      <span style={{ flex: 1, minWidth: 0 }}>{it.label}</span>
+    </button>
+  );
+
+  const menuRow = (it) => (
+    <button key={it.key} onClick={it.onClick}
+      style={{ display: "flex", alignItems: "center", gap: 13, width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: "1px solid #f2f3f6", padding: "14px 2px", cursor: "pointer", fontFamily: "'Open Sans',sans-serif", fontSize: 14, color: "#20242c" }}>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="#4b5563" aria-hidden="true" style={{ flexShrink: 0 }}><path d={it.icon} /></svg>
+      <span style={{ flex: 1, minWidth: 0 }}>{it.label}</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c2c8d1" strokeWidth="2" aria-hidden="true" style={{ flexShrink: 0 }}><path d="M9 6l6 6-6 6" /></svg>
+    </button>
+  );
+
+  const renderMobileMore = () => (
+    <div>
+      {navGroups.map((g, gi) => (
+        <div key={gi} style={{ marginBottom: 4 }}>
+          {g.label ? <div style={{ fontSize: 10.5, letterSpacing: "0.06em", color: "#9AA3AF", fontWeight: 700, textTransform: "uppercase", margin: "16px 2px 6px", fontFamily: "'Montserrat',sans-serif" }}>{g.label}</div> : null}
+          {g.items.map(menuRow)}
+        </div>
+      ))}
+      <div style={{ marginTop: 16 }}>
+        {footerItems.map(menuRow)}
+        {menuRow(signOutItem)}
+      </div>
+    </div>
+  );
+
   return (
-    <div style={{ fontFamily: "'Open Sans',Arial,sans-serif", background: B.offWhite, minHeight: "100vh", overflowX: "hidden" }}>
+    <div style={{ fontFamily: "'Open Sans',Arial,sans-serif", background: B.offWhite, minHeight: "100vh", overflowX: "hidden", paddingLeft: isMobile ? 0 : 248, paddingBottom: isMobile ? 62 : 0 }}>
       <style>{GFONTS}</style>
       <style>{A11Y_CSS}</style>
       <a className="ycdi-skip" href="#ycdi-main">Skip to main content</a>
@@ -259,99 +364,60 @@ export default function App() {
         }
       `}</style>
 
-      {(() => {
-        const TABS = [
-          { id: "home", label: "Dashboard", short: "Dashboard" },
-          { id: "programmes", label: "Programme Operations", short: "Programmes" },
-          { id: "reports", label: "Reports", short: "Reports" },
-          { id: "spiritual", label: "Spiritual Ministry", short: "Spiritual" },
-          { id: "prayer", label: "Prayer Manual", short: "Prayer" },
-          { id: "directory", label: "Directory", short: "Directory" },
-          { id: "more", label: "More", short: "More" },
-        ].filter((t) => t.id !== "programmes" || profile.role !== "TM");
-        const tabBtn = (t) => (
-          <button key={t.id} onClick={() => goToSection(t.id)} aria-current={section === t.id ? "page" : undefined} style={{ background: "none", border: "none", borderBottom: `3px solid ${section === t.id ? B.white : "transparent"}`, color: section === t.id ? B.white : "rgba(255,255,255,0.65)", padding: "14px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Montserrat',sans-serif", fontWeight: section === t.id ? 700 : 400, whiteSpace: "nowrap", flexShrink: 0 }}>
-            {t.label}
-          </button>
-        );
-        // The crest carries the name on its own now, and it doubles as the
-        // way home. The label below stays on the button for screen readers,
-        // so tapping the crest still announces where it goes.
-        const logoHome = (h) => (
-          <button onClick={() => goToSection("home")} aria-label="Go to dashboard" style={{ background: "none", border: "none", padding: 0, margin: 0, cursor: "pointer", display: "flex", lineHeight: 0 }}>
-            <YCDILogo height={h} dark markOnly />
-          </button>
-        );
-        const roleLine = (profile.role === "NC" ? "National Coordinator" : profile.role === "TM" ? profile.chapter_name + " Team Member" : profile.chapter_name + " RC") + (profile.is_admin ? " · Admin" : "");
-        const userBlock = (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            <NotificationBell onOpen={openFromNotification} isMobile={isMobile} />
-            <button onClick={() => navigateFromDashboard("more", "profile")} aria-label={"My profile, " + profile.full_name} style={{ background: "none", border: "none", padding: 0, margin: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
-              <Avatar name={profile.full_name} size={30} decorative />
-              {!isMobile ? (
-                <div style={{ textAlign: "left" }}>
-                  <div style={{ fontSize: 12, color: B.white, fontWeight: 700, fontFamily: "'Montserrat',sans-serif", lineHeight: 1.2, textDecoration: "underline", textUnderlineOffset: 2 }}>{profile.full_name}</div>
-                  <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)" }}>{roleLine}</div>
-                </div>
-              ) : null}
-            </button>
-            <button onClick={signOut} style={{ background: "none", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 6, color: "rgba(255,255,255,0.75)", padding: "5px 12px", fontSize: 11, cursor: "pointer" }}>
-              Sign out
+      {!isMobile ? (
+        <aside aria-label="Main navigation" style={{ position: "fixed", top: 0, left: 0, bottom: 0, width: 248, background: B.white, borderRight: "1px solid " + B.border, display: "flex", flexDirection: "column", zIndex: 90 }}>
+          <div style={{ padding: "16px 16px 12px" }}>
+            <button onClick={() => goToSection("home")} aria-label="Go to dashboard" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex" }}>
+              <YCDILogo height={34} />
             </button>
           </div>
-        );
-
-        if (isMobile) {
-          return (
-            <div className="ycdi-onblue" style={{ position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 10px rgba(0,0,0,0.12)" }}>
-              <div style={{ background: B.blue, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", gap: 10 }}>
-                {logoHome(30)}
-                {userBlock}
+          <div style={{ flex: 1, overflowY: "auto", padding: "4px 12px 12px" }}>
+            {navGroups.map((g, gi) => (
+              <div key={gi} style={{ marginBottom: 4 }}>
+                {g.label ? <div style={{ fontSize: 10.5, letterSpacing: "0.07em", color: "#9AA3AF", fontWeight: 700, textTransform: "uppercase", padding: "10px 10px 6px", fontFamily: "'Montserrat',sans-serif" }}>{g.label}</div> : null}
+                {g.items.map(navRow)}
               </div>
-              <nav aria-label="Sections" style={{ background: B.blue, display: "flex", flexWrap: "wrap", gap: 6, padding: "0 10px 10px", borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: 10 }}>
-                {TABS.map((t) => {
-                  const on = section === t.id;
-                  return (
-                    <button
-                      key={t.id}
-                      onClick={() => goToSection(t.id)}
-                      aria-current={on ? "page" : undefined}
-                      aria-label={t.label}
-                      style={{
-                        flex: "1 1 28%",
-                        minWidth: 0,
-                        background: on ? B.white : "rgba(255,255,255,0.14)",
-                        color: on ? B.brandDeep : "rgba(255,255,255,0.9)",
-                        border: "none",
-                        borderRadius: 20,
-                        padding: "9px 8px",
-                        fontSize: 12,
-                        fontFamily: "'Montserrat',sans-serif",
-                        fontWeight: on ? 700 : 600,
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {t.short || t.label}
-                    </button>
-                  );
-                })}
-              </nav>
+            ))}
+          </div>
+          <div style={{ borderTop: "1px solid " + B.offWhite, padding: "10px 12px" }}>
+            {footerItems.map(navRow)}
+            {navRow(signOutItem)}
+            <div style={{ fontSize: 11, color: "#9AA3AF", padding: "8px 10px 2px" }}>YCDI Hub</div>
+          </div>
+        </aside>
+      ) : null}
+
+      {!isMobile ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 18, padding: "12px 24px", background: B.white, borderBottom: "1px solid " + B.border, position: "sticky", top: 0, zIndex: 80 }}>
+          <div style={{ color: B.muted, fontSize: 13 }}>Working together for a generation that makes a difference</div>
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+            <NotificationBell onOpen={openFromNotification} isMobile={false} onLight />
+            <button onClick={() => navigateFromDashboard("more", "profile")} aria-label={"My profile, " + profile.full_name} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 9 }}>
+              <Avatar name={profile.full_name} size={32} decorative />
+              <div style={{ textAlign: "left" }}>
+                <div style={{ fontSize: 12.5, color: B.black, fontWeight: 700, fontFamily: "'Montserrat',sans-serif", lineHeight: 1.2 }}>{profile.full_name}</div>
+                <div style={{ fontSize: 11, color: B.muted }}>{roleLine}</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {isMobile ? (
+        <div className="ycdi-onblue" style={{ position: "sticky", top: 0, zIndex: 90, background: B.blue, boxShadow: "0 2px 10px rgba(0,0,0,0.12)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", gap: 10 }}>
+            <button onClick={() => goToSection("home")} aria-label="Go to dashboard" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", lineHeight: 0 }}>
+              <YCDILogo height={30} dark markOnly />
+            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <NotificationBell onOpen={openFromNotification} isMobile />
+              <button onClick={() => navigateFromDashboard("more", "profile")} aria-label={"My profile, " + profile.full_name} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex" }}>
+                <Avatar name={profile.full_name} size={30} decorative />
+              </button>
             </div>
-          );
-        }
-        return (
-          <nav aria-label="Sections" className="ycdi-onblue" style={{ background: B.blue, display: "flex", alignItems: "center", padding: "0 20px", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 10px rgba(0,0,0,0.12)" }}>
-            <div style={{ padding: "8px 0", marginRight: 20, paddingRight: 20, borderRight: "1px solid rgba(255,255,255,0.2)" }}>
-              {logoHome(36)}
-            </div>
-            {TABS.map(tabBtn)}
-            <div style={{ marginLeft: "auto" }}>{userBlock}</div>
-          </nav>
-        );
-      })()}
+          </div>
+        </div>
+      ) : null}
 
       {updateReady ? (
         <div role="status" aria-live="polite" style={{ background: B.blueDark, color: B.white, padding: "9px 14px", fontSize: 12.5, textAlign: "center", lineHeight: 1.5, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
@@ -412,7 +478,7 @@ export default function App() {
             {section === "prayer" ? <PrayerManualSection /> : null}
             {section === "directory" ? <DirectorySection profile={profile} chapters={chapters} showToast={showToast} /> : null}
             {section === "reports" ? <ReportsSection profile={profile} chapters={chapters} showToast={showToast} /> : null}
-            {section === "more" ? <MoreSection profile={profile} chapters={chapters} showToast={showToast} view={moreView} setView={setMoreView} /> : null}
+            {section === "more" ? ((isMobile && !moreView) ? renderMobileMore() : <MoreSection profile={profile} chapters={chapters} showToast={showToast} view={moreView} setView={setMoreView} />) : null}
           </Suspense>
         </ErrorBoundary>
       </main>
@@ -420,6 +486,18 @@ export default function App() {
       <footer style={{ background: B.black, color: "rgba(255,255,255,0.4)", padding: "14px 24px", textAlign: "center", fontSize: 11, marginTop: 40 }}>
         2025 Young Christian Development Initiative (YCDI) - RaisingGodlyLeaders - ycdinigeria@gmail.com
       </footer>
+
+      {isMobile ? (
+        <nav aria-label="Sections" style={{ position: "fixed", left: 0, right: 0, bottom: 0, height: 62, background: B.white, borderTop: "1px solid " + B.border, display: "grid", gridTemplateColumns: `repeat(${bottomTabs.length}, 1fr)`, zIndex: 95 }}>
+          {bottomTabs.map((t) => (
+            <button key={t.key} onClick={t.onClick} aria-current={t.active ? "page" : undefined} aria-label={t.label}
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: "none", border: "none", cursor: "pointer", color: t.active ? B.blue : "#9AA3AF", fontFamily: "'Montserrat',sans-serif", fontSize: 10.5, fontWeight: 600 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill={t.active ? B.blue : "#9AA3AF"} aria-hidden="true"><path d={t.icon} /></svg>
+              {t.label}
+            </button>
+          ))}
+        </nav>
+      ) : null}
 
       {toast ? <Toast msg={toast.msg} type={toast.type} /> : null}
     </div>
