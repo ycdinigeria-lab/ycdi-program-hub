@@ -142,7 +142,11 @@ export default function App() {
     setLoading(true);
     const { data } = await supabase.from("profiles").select("*, chapters(name)").eq("id", userId).single();
     if (data) {
-      setProfile({ ...data, chapter_name: data.chapters?.name || null });
+      // Which NEC seats this person holds, if any. The seat grants no
+      // access by itself; the app reads it to show the right tabs, and
+      // the database enforces the matching reach on its own.
+      const { data: seats } = await supabase.from("nec_portfolios").select("portfolio").eq("profile_id", userId);
+      setProfile({ ...data, chapter_name: data.chapters?.name || null, portfolios: (seats || []).map((s) => s.portfolio) });
       await loadChapters();
     }
     setLoading(false);
