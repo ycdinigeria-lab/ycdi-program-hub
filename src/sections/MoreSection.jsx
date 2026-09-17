@@ -181,8 +181,10 @@ export const MORE_FEATURES = [
     accent: B.gold,
     // Coordinators can see it because a chapter that cannot see the target
     // has no way of knowing it is behind. Row security still decides whose
-    // beneficiary figures each person is shown.
+    // beneficiary figures each person is shown. The Programmes Director
+    // holds M&E under the governance amendment, so the PD seat opens it too.
     roles: ["NC", "RC"],
+    portfolio: "PD",
     render: (props) => <KpiReportSection {...props} />,
   },
   {
@@ -204,8 +206,10 @@ export const MORE_FEATURES = [
     accent: B.black,
     // The National Coordinator and admins. Not Regional Coordinators:
     // the log spans every chapter and carries national access changes,
-    // and chapter-scoping it would leave half a sentence behind.
+    // and chapter-scoping it would leave half a sentence behind. The
+    // Secretary keeps the records, so the SEC seat reads it too.
     roles: ["NC"],
+    portfolio: "SEC",
     render: (props) => <AuditLogSection {...props} />,
   },
   {
@@ -293,7 +297,9 @@ export function visibleMoreFeatures(profile) {
       // ends up on whoever keeps the system running, so those cards say
       // so with adminExempt and the database refuses them as well.
       const adminMayEnter = profile.is_admin && !f.adminExempt;
+      const holdsSeat = f.portfolio && (profile.portfolios || []).includes(f.portfolio);
       const allowed = f.roles.includes(profile.role)
+        || holdsSeat
         || (f.id === "safeguarding" ? profile.is_safeguarding_lead : adminMayEnter);
       if (!allowed) return false;
     }
