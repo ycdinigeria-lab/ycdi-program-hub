@@ -127,7 +127,6 @@ export const MORE_FEATURES = [
     // database refuses them too; this only stops them seeing a door they
     // cannot open.
     roles: ["NC", "RC"],
-    portfolios: ["VC"],
     render: (props) => <VolunteersSection {...props} />,
   },
   {
@@ -156,7 +155,6 @@ export const MORE_FEATURES = [
     // Only the Designated Safeguarding Officers and the Board
     // Safeguarding Chair. The database enforces it as well.
     roles: ["NC", "RC"],
-    portfolios: ["VC"],
     render: (props) => <SafeguardingSection {...props} />,
   },
   {
@@ -172,7 +170,6 @@ export const MORE_FEATURES = [
     // are kept out here and in the database.
     roles: ["NC", "RC"],
     adminExempt: true,
-    portfolios: ["VC"],
     render: (props) => <RenewalsSection {...props} />,
   },
   {
@@ -184,8 +181,10 @@ export const MORE_FEATURES = [
     accent: B.gold,
     // Coordinators can see it because a chapter that cannot see the target
     // has no way of knowing it is behind. Row security still decides whose
-    // beneficiary figures each person is shown.
+    // beneficiary figures each person is shown. The Programmes Director
+    // holds M&E under the governance amendment, so the PD seat opens it too.
     roles: ["NC", "RC"],
+    portfolio: "PD",
     render: (props) => <KpiReportSection {...props} />,
   },
   {
@@ -296,7 +295,7 @@ export function visibleMoreFeatures(profile) {
       // ends up on whoever keeps the system running, so those cards say
       // so with adminExempt and the database refuses them as well.
       const adminMayEnter = profile.is_admin && !f.adminExempt;
-      const holdsSeat = f.portfolios && (profile.portfolios || []).some((c) => f.portfolios.includes(c));
+      const holdsSeat = f.portfolio && (profile.portfolios || []).includes(f.portfolio);
       const allowed = f.roles.includes(profile.role)
         || holdsSeat
         || (f.id === "safeguarding" ? profile.is_safeguarding_lead : adminMayEnter);
