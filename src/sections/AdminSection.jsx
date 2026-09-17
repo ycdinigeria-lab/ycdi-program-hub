@@ -4,6 +4,7 @@ import { B, btnG, btnP, inp } from "../theme.js";
 import { Card, Field } from "../components/ui.jsx";
 import CrashLog from "./CrashLog.jsx";
 import { validateChapterName, cleanChapterName } from "../lib/chapters.js";
+import { PORTFOLIOS, PORTFOLIO_LABEL } from "../data/portfolios.js";
 
 const ROLE_LABEL = { NC: "National Coordinator", RC: "Regional Coordinator", TM: "Team Member" };
 
@@ -101,6 +102,111 @@ function ChaptersPanel({ showToast }) {
   );
 }
 
+// ------------------------------------------------------------
+// NEC seats: who holds each portfolio (YCDI-GOV-007-A1)
+// ------------------------------------------------------------
+// A seat is a label and a routing target. Assigning one gives the holder
+// no new access, so this screen only records who carries which duty. The
+// database refuses the assignment unless the caller is a National
+// Coordinator or an admin, so this panel is the same gate, shown early.
+function PortfoliosPanel({ profile, showToast }) {
+  const [seats, setSeats] = useState({});     // code -> holder profile id
+  const [members, setMembers] = useState([]); // from admin_list_profiles
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(null);
+  const canAssign = profile.role === "NC" || profile.is_admin;
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const [seatRes, memberRes] = await Promise.all([
+      supabase.from("nec_portfolios").select("portfolio, profile_id"),
+      supabase.rpc("admin_list_profiles"),
+    ]);
+    if (memberRes.error) showToast("Could not load the member list: " + memberRes.error.message, "error");
+    const map = {};
+    (seatRes.data || []).forEach((r) => { map[r.portfolio] = r.profile_id; });
+    setSeats(map);
+    setMembers(memberRes.data || []);
+    setLoading(false);
+  }, [showToast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const nameOf = (id) => members.find((m) => m.id === id)?.full_name || null;
+
+  async function assign(code, targetId) {
+    if (!targetId) return;
+    setBusy(code);
+    const { error } = await supabase.rpc("set_portfolio", { target: targetId, code, assign: true });
+    setBusy(null);
+    if (error) { showToast(error.message, "error"); return; }
+    setSeats((s) => ({ ...s, [code]: targetId }));
+    showToast(`${PORTFOLIO_LABEL[code]} assigned to ${nameOf(targetId) || "member"}.`);
+  }
+
+  async function clearSeat(code) {
+    const holder = seats[code];
+    if (!holder) return;
+    if (!window.confirm(`Leave the ${PORTFOLIO_LABEL[code]} seat unfilled?`)) return;
+    setBusy(code);
+    const { error } = await supabase.rpc("set_portfolio", { target: holder, code, assign: false });
+    setBusy(null);
+    if (error) { showToast(error.message, "error"); return; }
+    setSeats((s) => { const n = { ...s }; delete n[code]; return n; });
+    showToast(`${PORTFOLIO_LABEL[code]} is now unfilled.`);
+  }
+
+  if (loading) return <div style={{ padding: 40, textAlign: "center", color: B.muted }}>Loading seats…</div>;
+
+  return (
+    <>
+      <Card style={{ background: B.blueLight, borderColor: B.blue + "30", marginBottom: 18 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: B.blueDark, fontFamily: "'Montserrat',sans-serif", marginBottom: 4 }}>NEC Seats</div>
+        <p style={{ margin: 0, fontSize: 12, color: B.muted, lineHeight: 1.7 }}>
+          Records who holds each national seat under the governance amendment. A seat is a responsibility and a place for reminders to land, not an access level, so naming a holder here changes nothing about what they can see or do. One person can hold more than one seat. Only a National Coordinator or an admin can make a change.
+        </p>
+      </Card>
+
+      {PORTFOLIOS.map((p) => {
+        const holder = seats[p.code];
+        return (
+          <div key={p.code} style={{ padding: "12px 14px", background: B.white, border: "1px solid " + B.border, borderRadius: 10, marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontFamily: "'Montserrat',sans-serif", fontWeight: 700, fontSize: 13.5, color: B.black }}>{p.label}</span>
+              {holder
+                ? <span style={{ background: B.blueLight, color: B.blueDark, padding: "2px 8px", borderRadius: 20, fontSize: 10.5, fontWeight: 700, fontFamily: "'Montserrat',sans-serif" }}>{nameOf(holder) || "Assigned"}</span>
+                : <span style={{ background: B.offWhite, color: B.muted, padding: "2px 8px", borderRadius: 20, fontSize: 10.5, fontWeight: 700, fontFamily: "'Montserrat',sans-serif" }}>Unfilled</span>}
+            </div>
+            <div style={{ fontSize: 11.5, color: B.muted, marginTop: 2 }}>{p.duty}</div>
+            {canAssign ? (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                <select
+                  value={holder || ""}
+                  disabled={busy === p.code}
+                  onChange={(e) => assign(p.code, e.target.value)}
+                  style={{ ...inp, flex: "1 1 220px", maxWidth: 320 }}
+                >
+                  <option value="">Assign to…</option>
+                  {members.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.full_name}{m.chapter_name ? " · " + m.chapter_name : ""}
+                    </option>
+                  ))}
+                </select>
+                {holder ? (
+                  <button style={{ ...btnG, opacity: busy === p.code ? 0.6 : 1 }} disabled={busy === p.code} onClick={() => clearSeat(p.code)}>
+                    {busy === p.code ? "…" : "Clear"}
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 export default function AdminSection({ profile, showToast }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -163,12 +269,14 @@ export default function AdminSection({ profile, showToast }) {
     <div>
       <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 18 }}>
         {tabBtn("admins", "Admins")}
+        {tabBtn("portfolios", "NEC Seats")}
         {tabBtn("chapters", "Chapters")}
         {tabBtn("crashes", "Crash log")}
       </div>
 
       {tab === "crashes" ? <CrashLog showToast={showToast} />
        : tab === "chapters" ? <ChaptersPanel showToast={showToast} />
+       : tab === "portfolios" ? <PortfoliosPanel profile={profile} showToast={showToast} />
        : (
       <>
       <Card style={{ background: B.blueLight, borderColor: B.blue + "30", marginBottom: 18 }}>

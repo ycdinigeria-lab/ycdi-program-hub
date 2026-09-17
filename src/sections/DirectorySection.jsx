@@ -4,6 +4,7 @@ import { B } from "../theme.js";
 import { usePaged } from "../lib/paging.js";
 import { ShowMore } from "../components/ShowMore.jsx";
 import { compressImage } from "../lib/imageCompress.js";
+import { PORTFOLIO_LABEL } from "../data/portfolios.js";
 
 // BATCH4-MARKER directory-perf
 // BATCH6A-MARKER directory-contacts
@@ -73,6 +74,13 @@ function MemberCard({ member, canEdit, onEdit, onRemove }) {
         <div style={{ minWidth: 0 }}>
           <div style={{ fontFamily: "'Montserrat',sans-serif", fontWeight: 700, fontSize: 15, lineHeight: 1.25 }}>{member.full_name}</div>
           {member.role_title ? <div style={{ fontSize: 13, color: B.blue, fontWeight: 600, marginTop: 2 }}>{member.role_title}</div> : null}
+          {member.seats && member.seats.length ? (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 5 }}>
+              {member.seats.map((s) => (
+                <span key={s} style={{ background: B.blueLight, color: B.blueDark, padding: "2px 8px", borderRadius: 20, fontSize: 10, fontWeight: 700, fontFamily: "'Montserrat',sans-serif" }}>{s}</span>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
       {member.bio ? <p style={{ fontSize: 13, color: "#4B5563", lineHeight: 1.5, margin: "0 0 11px" }}>{member.bio}</p> : null}
@@ -200,11 +208,22 @@ export default function DirectorySection({ profile, chapters, showToast }) {
     const { data: contacts } = await supabase.rpc("directory_contacts_visible");
     const byMember = {};
     (contacts || []).forEach((r) => { byMember[r.member_id] = r; });
+
+    // NEC seats hang off the sign-in account, not the directory card, so
+    // they attach by profile_id. A card with no account, or an account
+    // holding no seat, simply carries none.
+    const { data: seatRows } = await supabase.from("nec_portfolios").select("portfolio, profile_id");
+    const seatByProfile = {};
+    (seatRows || []).forEach((r) => {
+      (seatByProfile[r.profile_id] = seatByProfile[r.profile_id] || []).push(PORTFOLIO_LABEL[r.portfolio]);
+    });
+
     const rows = (data || []).map((d) => ({
       ...d,
       chapter_name: d.chapters?.name || null,
       phone: byMember[d.id]?.phone || "",
       email: byMember[d.id]?.email || "",
+      seats: d.profile_id ? (seatByProfile[d.profile_id] || []) : [],
     }));
 
     // Photos live in a private bucket and need a signed link. This used to
