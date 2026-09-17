@@ -276,7 +276,7 @@ export default function App() {
       coreItem("prayer", "Prayer Manual", CORE_ICONS.prayer),
     ]) },
     { label: "Communication", items: clean([
-      moreItem("calendar"), moreItem("messaging"), moreItem("documents"),
+      moreItem("calendar"), moreItem("messaging"), moreItem("documents"), moreItem("content"),
     ]) },
     { label: "Safeguarding & compliance", items: clean([
       moreItem("safeguarding"), moreItem("renewals"), moreItem("kpi"), moreItem("dataprotection"),

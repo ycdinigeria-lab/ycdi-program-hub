@@ -23,6 +23,8 @@ const MyProfileSection = lazy(() => import("./MyProfileSection.jsx"));
 const VolunteersSection = lazy(() => import("./VolunteersSection.jsx"));
 const AuditLogSection = lazy(() => import("./AuditLogSection.jsx"));
 const DataProtectionSection = lazy(() => import("./DataProtectionSection.jsx"));
+// BATCH23-MARKER more-content
+const ContentSection = lazy(() => import("./ContentSection.jsx"));
 // BATCH7A-MARKER more-applications
 const ApplicationsSection = lazy(() => import("./ApplicationsSection.jsx"));
 // BATCH7B-MARKER more-renewals
@@ -76,6 +78,24 @@ export const MORE_FEATURES = [
     icon: ICONS.docs,
     accent: B.blue,
     render: (props) => <DocumentsSection {...props} />,
+  },
+  {
+    // BATCH23-MARKER more-content
+    id: "content",
+    category: "comms",
+    title: "Content for Review",
+    short: "Draft, review and clear posts",
+    icon: ICONS.inbox,
+    accent: B.blue,
+    // Who this belongs to: the Regional Coordinator writes chapter posts,
+    // the Communications Officer (COMMS seat) clears them and writes
+    // national posts, the National Coordinator clears those. An RC needs
+    // the door even though they hold no seat, so RC is named in roles;
+    // the COMMS seat and the NC come in through portfolio and roles. The
+    // database is the real gate — this only decides who sees the card.
+    roles: ["RC", "NC"],
+    portfolio: "COMMS",
+    render: (props) => <ContentSection {...props} />,
   },
   {
     id: "messaging",
