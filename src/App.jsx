@@ -279,7 +279,7 @@ export default function App() {
       moreItem("calendar"), moreItem("messaging"), moreItem("documents"),
     ]) },
     { label: "Safeguarding & compliance", items: clean([
-      moreItem("safeguarding"), moreItem("renewals"), moreItem("kpi"),
+      moreItem("safeguarding"), moreItem("renewals"), moreItem("kpi"), moreItem("dataprotection"),
     ]) },
     { label: "Administration", items: clean([
       moreItem("admin"), moreItem("audit"),
