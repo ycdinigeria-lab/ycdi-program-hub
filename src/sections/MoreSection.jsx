@@ -22,6 +22,7 @@ const MyProfileSection = lazy(() => import("./MyProfileSection.jsx"));
 // BATCH6B-MARKER more-register-and-audit
 const VolunteersSection = lazy(() => import("./VolunteersSection.jsx"));
 const AuditLogSection = lazy(() => import("./AuditLogSection.jsx"));
+const DataProtectionSection = lazy(() => import("./DataProtectionSection.jsx"));
 // BATCH7A-MARKER more-applications
 const ApplicationsSection = lazy(() => import("./ApplicationsSection.jsx"));
 // BATCH7B-MARKER more-renewals
@@ -211,6 +212,20 @@ export const MORE_FEATURES = [
     roles: ["NC"],
     portfolio: "SEC",
     render: (props) => <AuditLogSection {...props} />,
+  },
+  {
+    id: "dataprotection",
+    category: "compliance",
+    title: "Data Protection",
+    short: "Subject requests and breaches",
+    icon: ICONS.key,
+    accent: B.blue,
+    // The National Coordinator is the Data Controller (LEG-003), and the
+    // Secretary's seat keeps the register. Nobody else, since it names the
+    // people who have asked about their data and the breaches YCDI has had.
+    roles: ["NC"],
+    portfolio: "SEC",
+    render: (props) => <DataProtectionSection {...props} />,
   },
   {
     id: "profile",
