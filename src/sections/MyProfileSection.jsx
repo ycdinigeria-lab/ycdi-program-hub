@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../lib/supabase.js";
 import { B, inp, ta, btnP, btnG } from "../theme.js";
 import { compressImage } from "../lib/imageCompress.js";
+import CompleteVolunteerRecordSection from "./CompleteVolunteerRecordSection.jsx";
 import {
   ONBOARDING_STEPS,
   onboardingProgress,
@@ -311,6 +312,9 @@ export default function MyProfileSection({ profile, showToast }) {
           <dd style={{ margin: 0, fontWeight: 600, wordBreak: "break-all" }}>{card1.email || "Not recorded"}</dd>
         </dl>
       </section>
+
+      {/* ---- Complete your screening record, if it's missing ---- */}
+      <CompleteVolunteerRecordSection profile={profile} showToast={showToast} />
 
       {/* ---- Volunteer record ---- */}
       <section style={card} aria-labelledby="prof-vol">
