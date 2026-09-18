@@ -29,6 +29,7 @@ const CONSENT_TYPES = [
   { id: "photo_published", label: "Individual photograph published", note: "Signed parental form required, kept on file." },
   { id: "testimony_named", label: "Testimony with name and photo", note: "Signed consent, reviewed by the National Coordinator." },
   { id: "video", label: "Video recording used in communications", note: "Signed video consent form required." },
+  { id: "direct_contact", label: "Direct contact via the Hub (18+ only)", note: "Required before a direct-contact account can be invited. Only offered for 18+ participants." },
 ];
 
 export function isMinorBand(band) {
@@ -261,6 +262,8 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
   const [tpKind, setTpKind] = useState("content");
   const [tpUnitRef, setTpUnitRef] = useState("");
   const [tpNote, setTpNote] = useState("");
+  const [account, setAccount] = useState(null);
+  const [inviting, setInviting] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const canEdit = canEditParticipant(profile, p);
@@ -287,6 +290,9 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
       .eq("participant_id", id)
       .order("occurred_on", { ascending: false }).limit(20);
     setTouchpoints(tp || []);
+    const { data: acct } = await supabase.from("participant_accounts")
+      .select("active, invited_on").eq("participant_id", id).maybeSingle();
+    setAccount(acct || null);
     if (data?.chapter_id) {
       const { data: pr } = await supabase.from("programs")
         .select("id, title, date").eq("chapter_id", data.chapter_id)
@@ -370,6 +376,29 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
     load();
   }
 
+  async function inviteDirectContact() {
+    setInviting(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { showToast("Not signed in.", "error"); setInviting(false); return; }
+    try {
+      const res = await fetch("/.netlify/functions/invite-participant-account", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ participant_id: id }),
+      });
+      const body = await res.json();
+      if (!res.ok) { showToast(body.error || "Invite failed.", "error"); setInviting(false); return; }
+      showToast(body.message || "Invite sent.");
+    } catch {
+      showToast("Could not reach the server. Try again.", "error");
+    }
+    setInviting(false);
+    load();
+  }
+
   async function toggleAttendance(programId, present) {
     setBusy(true);
     const { error } = await supabase.rpc("record_mentee_attendance", { p_participant: id, p_program: programId, p_present: present });
@@ -381,7 +410,10 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
   if (!p) return <Card style={{ textAlign: "center", padding: 30, color: B.muted, fontSize: 13 }}>Loading…</Card>;
 
   const live = consents.filter((c) => !c.withdrawn_on);
-  const available = CONSENT_TYPES.filter((t) => !live.some((c) => c.consent_type === t.id));
+  const available = CONSENT_TYPES
+    .filter((t) => !live.some((c) => c.consent_type === t.id))
+    .filter((t) => t.id !== "direct_contact" || p.age_band === "18+");
+  const hasDirectContactConsent = live.some((c) => c.consent_type === "direct_contact");
   const attendedIds = new Set(attendance.map((a) => a.program_id));
 
   return (
@@ -453,6 +485,24 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
               </button>
             ) : null}
           </div>
+        </Card>
+      ) : null}
+
+      {coordinator && p.age_band === "18+" ? (
+        <Card style={{ marginBottom: 14 }}>
+          <SHead>Direct contact account</SHead>
+          <div style={{ fontSize: 11.5, color: B.muted, marginBottom: 12, lineHeight: 1.55 }}>
+            Gives this participant a login to message their mentor directly. Only offered for 18+ participants, and only after direct-contact consent is recorded above.
+          </div>
+          {account && account.active ? (
+            <div style={{ fontSize: 12.5, color: "#333" }}>Account active, invited {niceDate(account.invited_on)}.</div>
+          ) : hasDirectContactConsent ? (
+            <button style={btnP} onClick={inviteDirectContact} disabled={inviting}>
+              {inviting ? "Sending…" : "Invite to direct contact"}
+            </button>
+          ) : (
+            <div style={{ fontSize: 12.5, color: B.muted }}>Record direct-contact consent below before inviting.</div>
+          )}
         </Card>
       ) : null}
 
