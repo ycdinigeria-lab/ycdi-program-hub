@@ -30,6 +30,7 @@ const CONSENT_TYPES = [
   { id: "testimony_named", label: "Testimony with name and photo", note: "Signed consent, reviewed by the National Coordinator." },
   { id: "video", label: "Video recording used in communications", note: "Signed video consent form required." },
   { id: "direct_contact", label: "Direct contact via the Hub (18+ only)", note: "Required before a direct-contact account can be invited. Only offered for 18+ participants." },
+  { id: "guardian_digest", label: "Guardian read-only account (minors only)", note: "The guardian consents to being given a login to see what's logged for this participant. Required before a guardian account can be invited." },
 ];
 
 export function isMinorBand(band) {
@@ -267,6 +268,14 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
   const [tpNote, setTpNote] = useState("");
   const [account, setAccount] = useState(null);
   const [inviting, setInviting] = useState(false);
+  const [guardian, setGuardian] = useState(null);
+  const [guardianAccount, setGuardianAccount] = useState(null);
+  const [editingGuardian, setEditingGuardian] = useState(false);
+  const [gName, setGName] = useState("");
+  const [gRelationship, setGRelationship] = useState("");
+  const [gEmail, setGEmail] = useState("");
+  const [gPhone, setGPhone] = useState("");
+  const [invitingGuardian, setInvitingGuardian] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const canEdit = canEditParticipant(profile, p);
@@ -296,6 +305,16 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
     const { data: acct } = await supabase.from("participant_accounts")
       .select("active, invited_on").eq("participant_id", id).maybeSingle();
     setAccount(acct || null);
+    const { data: g } = await supabase.from("participant_guardians")
+      .select("id, full_name, relationship, email, phone").eq("participant_id", id).maybeSingle();
+    setGuardian(g || null);
+    if (g) {
+      const { data: ga } = await supabase.from("guardian_accounts")
+        .select("active, invited_on").eq("guardian_id", g.id).maybeSingle();
+      setGuardianAccount(ga || null);
+    } else {
+      setGuardianAccount(null);
+    }
     if (data?.chapter_id) {
       const { data: pr } = await supabase.from("programs")
         .select("id, title, date").eq("chapter_id", data.chapter_id)
@@ -414,6 +433,50 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
     load();
   }
 
+  async function saveGuardian() {
+    if (!gName.trim() || (!gEmail.trim() && !gPhone.trim())) {
+      showToast("A name and at least a phone or email are needed.", "error");
+      return;
+    }
+    setBusy(true);
+    const { error } = await supabase.from("participant_guardians").upsert({
+      participant_id: id,
+      full_name: gName.trim(),
+      relationship: gRelationship.trim() || null,
+      email: gEmail.trim() || null,
+      phone: gPhone.trim() || null,
+      recorded_by: profile.id,
+    }, { onConflict: "participant_id" });
+    setBusy(false);
+    if (error) { showToast(error.message, "error"); return; }
+    setEditingGuardian(false);
+    showToast("Guardian details saved.");
+    load();
+  }
+
+  async function inviteGuardian() {
+    setInvitingGuardian(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { showToast("Not signed in.", "error"); setInvitingGuardian(false); return; }
+    try {
+      const res = await fetch("/.netlify/functions/invite-guardian-account", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ participant_id: id }),
+      });
+      const body = await res.json();
+      if (!res.ok) { showToast(body.error || "Invite failed.", "error"); setInvitingGuardian(false); return; }
+      showToast(body.message || "Invite sent.");
+    } catch {
+      showToast("Could not reach the server. Try again.", "error");
+    }
+    setInvitingGuardian(false);
+    load();
+  }
+
   async function toggleAttendance(programId, present) {
     setBusy(true);
     const { error } = await supabase.rpc("record_mentee_attendance", { p_participant: id, p_program: programId, p_present: present });
@@ -427,8 +490,10 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
   const live = consents.filter((c) => !c.withdrawn_on);
   const available = CONSENT_TYPES
     .filter((t) => !live.some((c) => c.consent_type === t.id))
-    .filter((t) => t.id !== "direct_contact" || p.age_band === "18+");
+    .filter((t) => t.id !== "direct_contact" || p.age_band === "18+")
+    .filter((t) => t.id !== "guardian_digest" || isMinorBand(p.age_band));
   const hasDirectContactConsent = live.some((c) => c.consent_type === "direct_contact");
+  const hasGuardianConsent = live.some((c) => c.consent_type === "guardian_digest");
   const attendedIds = new Set(attendance.map((a) => a.program_id));
 
   return (
@@ -553,6 +618,71 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
             </button>
           ) : (
             <div style={{ fontSize: 12.5, color: B.muted }}>Record direct-contact consent below before inviting.</div>
+          )}
+        </Card>
+      ) : null}
+
+      {coordinator && isMinorBand(p.age_band) ? (
+        <Card style={{ marginBottom: 14 }}>
+          <SHead>Guardian details</SHead>
+          <div style={{ fontSize: 11.5, color: B.muted, marginBottom: 12, lineHeight: 1.55 }}>
+            A parent or guardian's own contact details, held separately from this participant's record. Needed before a guardian digest account can be invited.
+          </div>
+          {editingGuardian ? (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+                <Field label="Name">
+                  <input style={inp} value={gName} onChange={(e) => setGName(e.target.value)} />
+                </Field>
+                <Field label="Relationship">
+                  <input style={inp} value={gRelationship} onChange={(e) => setGRelationship(e.target.value)} placeholder="Mother, father, guardian…" />
+                </Field>
+                <Field label="Email">
+                  <input style={inp} type="email" value={gEmail} onChange={(e) => setGEmail(e.target.value)} placeholder="At least one of email/phone" />
+                </Field>
+                <Field label="Phone">
+                  <input style={inp} value={gPhone} onChange={(e) => setGPhone(e.target.value)} />
+                </Field>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button style={btnP} onClick={saveGuardian} disabled={busy}>Save</button>
+                <button style={btnG} onClick={() => setEditingGuardian(false)}>Cancel</button>
+              </div>
+            </>
+          ) : guardian ? (
+            <>
+              <div style={{ fontSize: 12.5, color: "#333", marginBottom: 12 }}>
+                <strong>{guardian.full_name}</strong>{guardian.relationship ? " · " + guardian.relationship : ""}
+                <br />{[guardian.email, guardian.phone].filter(Boolean).join(" · ")}
+              </div>
+              <button style={btnG} onClick={() => { setGName(guardian.full_name); setGRelationship(guardian.relationship || ""); setGEmail(guardian.email || ""); setGPhone(guardian.phone || ""); setEditingGuardian(true); }}>
+                Edit
+              </button>
+            </>
+          ) : (
+            <button style={btnG} onClick={() => { setGName(""); setGRelationship(""); setGEmail(""); setGPhone(""); setEditingGuardian(true); }}>
+              Add guardian details
+            </button>
+          )}
+        </Card>
+      ) : null}
+
+      {coordinator && isMinorBand(p.age_band) ? (
+        <Card style={{ marginBottom: 14 }}>
+          <SHead>Guardian digest account</SHead>
+          <div style={{ fontSize: 11.5, color: B.muted, marginBottom: 12, lineHeight: 1.55 }}>
+            Read-only for the guardian: what's been logged for this participant, nothing else, no messaging. The participant is never given a login.
+          </div>
+          {guardianAccount && guardianAccount.active ? (
+            <div style={{ fontSize: 12.5, color: "#333" }}>Account active, invited {niceDate(guardianAccount.invited_on)}.</div>
+          ) : !guardian ? (
+            <div style={{ fontSize: 12.5, color: B.muted }}>Add guardian details above first.</div>
+          ) : hasGuardianConsent ? (
+            <button style={btnP} onClick={inviteGuardian} disabled={invitingGuardian}>
+              {invitingGuardian ? "Sending…" : "Invite guardian"}
+            </button>
+          ) : (
+            <div style={{ fontSize: 12.5, color: B.muted }}>Record guardian-digest consent below before inviting.</div>
           )}
         </Card>
       ) : null}
