@@ -12,8 +12,10 @@ import { useOnline } from "./useOnline.js";
 import { humanise } from "./lib/errors.js";
 import MoreSection, { moreFeatureTitle, visibleMoreFeatures } from "./sections/MoreSection.jsx";
 import { onUpdateReady, applyUpdate } from "./lib/pwa.js";
-import { arrivedForPasswordRecovery, hasAuthCallback, authLinkError, clearAuthCallbackFromUrl } from "./lib/authCallback.js";
+import { arrivedForPasswordRecovery, authCallbackType, hasAuthCallback, authLinkError, clearAuthCallbackFromUrl } from "./lib/authCallback.js";
 import SetPasswordScreen from "./auth/SetPasswordScreen.jsx";
+const ParticipantWelcome = lazy(() => import("./auth/ParticipantWelcome.jsx"));
+const GuardianWelcome = lazy(() => import("./auth/GuardianWelcome.jsx"));
 // BATCH6B-MARKER app-a11y
 import { A11Y_CSS, scrollToTop } from "./lib/a11y.js";
 // BATCH7A-MARKER app-public-route
@@ -54,10 +56,18 @@ export default function App() {
   const [moreView, setMoreView] = useState(null);
   const [toast, setToast] = useState(null);
   const [updateReady, setUpdateReady] = useState(false);
-  // True when somebody has arrived on a password reset link. Nothing else
-  // in the app is reachable until they choose a password or sign out.
+  // Batch 27: which kind of non-staff account this signed-in user has,
+  // if any. Only checked once a session exists and no staff profile
+  // row was found for it. "none" means genuinely no account of either
+  // kind, which is what actually means SignupPending.
+  const [nonStaffKind, setNonStaffKind] = useState(null);
+  // True when somebody has arrived on a password reset link, or on an
+  // invite link (Batch 27: a participant or guardian account, first
+  // sign-in). Both need a password chosen before anything else is
+  // reachable, and SetPasswordScreen already handles either case the
+  // same way, so this reuses the one flag rather than adding a second.
   // BATCH4C-MARKER recovery
-  const [recovery, setRecovery] = useState(arrivedForPasswordRecovery);
+  const [recovery, setRecovery] = useState(arrivedForPasswordRecovery || authCallbackType === "invite");
   const [linkError] = useState(authLinkError());
   const isMobile = useIsMobile();
   const online = useOnline();
@@ -147,7 +157,18 @@ export default function App() {
       // the database enforces the matching reach on its own.
       const { data: seats } = await supabase.from("nec_portfolios").select("portfolio").eq("profile_id", userId);
       setProfile({ ...data, chapter_name: data.chapters?.name || null, portfolios: (seats || []).map((s) => s.portfolio) });
+      setNonStaffKind(null);
       await loadChapters();
+    } else {
+      // No staff profile. Before assuming this is a pending staff
+      // signup, check whether this is actually a Batch 25 (direct
+      // contact) or Batch 26 (guardian digest) account, both of which
+      // are also signed-in users with no profiles row by design.
+      const [{ data: pid }, { data: gid }] = await Promise.all([
+        supabase.rpc("my_participant_id"),
+        supabase.rpc("my_guardian_participant_id"),
+      ]);
+      setNonStaffKind(pid ? "participant" : gid ? "guardian" : "none");
     }
     setLoading(false);
   }
@@ -205,7 +226,26 @@ export default function App() {
     );
   }
 
-  if (!profile) return <SignupPending user={session.user} onComplete={() => loadProfile(session.user.id)} />;
+  if (!profile) {
+    if (nonStaffKind === "participant") {
+      return (
+        <Suspense fallback={<SectionLoading />}>
+          <ParticipantWelcome onSignOut={signOut} />
+        </Suspense>
+      );
+    }
+    if (nonStaffKind === "guardian") {
+      return (
+        <Suspense fallback={<SectionLoading />}>
+          <GuardianWelcome onSignOut={signOut} />
+        </Suspense>
+      );
+    }
+    // "none", or still resolving from the checks in loadProfile.
+    // Genuinely no staff profile and no participant/guardian account
+    // is the pending-staff-signup case this screen was originally for.
+    return <SignupPending user={session.user} onComplete={() => loadProfile(session.user.id)} />;
+  }
 
   // Team Members have view-only access and don't get Programme Operations.
   // If it's ever the active section for them (e.g. it was the default before
