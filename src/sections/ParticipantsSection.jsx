@@ -246,6 +246,9 @@ function AddParticipant({ profile, chapters, onCancel, onSaved, showToast }) {
 // ------------------------------------------------------------
 function ParticipantDetail({ id, profile, onBack, showToast }) {
   const [p, setP] = useState(null);
+  const [editingContact, setEditingContact] = useState(false);
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
   const [history, setHistory] = useState([]);
   const [consents, setConsents] = useState([]);
   const [attendance, setAttendance] = useState([]);
@@ -311,6 +314,18 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
     if (error) { showToast(error.message, "error"); return; }
     setMoveTo(""); setMoveNote("");
     showToast("Stage updated.");
+    load();
+  }
+
+  async function saveContact() {
+    setBusy(true);
+    const { error } = await supabase.from("participants")
+      .update({ email: contactEmail.trim() || null, phone: contactPhone.trim() || null })
+      .eq("id", id);
+    setBusy(false);
+    if (error) { showToast(error.message, "error"); return; }
+    setEditingContact(false);
+    showToast("Contact details updated.");
     load();
   }
 
@@ -485,6 +500,42 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
               </button>
             ) : null}
           </div>
+        </Card>
+      ) : null}
+
+      {canEdit && p.age_band === "18+" ? (
+        <Card style={{ marginBottom: 14 }}>
+          <SHead>Contact details</SHead>
+          <div style={{ fontSize: 11.5, color: B.muted, marginBottom: 12, lineHeight: 1.55 }}>
+            Only held for tertiary (18+) participants. Needed before a direct-contact invite can be sent.
+          </div>
+          {editingContact ? (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+                <Field label="Email">
+                  <input style={inp} type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="Optional" />
+                </Field>
+                <Field label="Phone">
+                  <input style={inp} value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="Optional" />
+                </Field>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button style={btnP} onClick={saveContact} disabled={busy}>Save</button>
+                <button style={btnG} onClick={() => setEditingContact(false)}>Cancel</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 12.5, color: "#333", marginBottom: 12 }}>
+                {p.email || p.phone
+                  ? [p.email, p.phone].filter(Boolean).join(" · ")
+                  : "Nothing on file."}
+              </div>
+              <button style={btnG} onClick={() => { setContactEmail(p.email || ""); setContactPhone(p.phone || ""); setEditingContact(true); }}>
+                {p.email || p.phone ? "Edit" : "Add contact details"}
+              </button>
+            </>
+          )}
         </Card>
       ) : null}
 
