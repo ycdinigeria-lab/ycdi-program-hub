@@ -257,6 +257,10 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
   const [mentorOptions, setMentorOptions] = useState([]);
   const [assignTo, setAssignTo] = useState("");
   const [chapterProgs, setChapterProgs] = useState([]);
+  const [touchpoints, setTouchpoints] = useState([]);
+  const [tpKind, setTpKind] = useState("content");
+  const [tpUnitRef, setTpUnitRef] = useState("");
+  const [tpNote, setTpNote] = useState("");
   const [busy, setBusy] = useState(false);
 
   const canEdit = canEditParticipant(profile, p);
@@ -278,6 +282,11 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
     setMentor(m && m[0] ? m[0] : null);
     const { data: opts } = await supabase.rpc("chapter_mentor_options", { p_participant: id });
     setMentorOptions(opts || []);
+    const { data: tp } = await supabase.from("participant_touchpoints")
+      .select("id, kind, unit_ref, note, occurred_on, mentor_id, profiles(full_name)")
+      .eq("participant_id", id)
+      .order("occurred_on", { ascending: false }).limit(20);
+    setTouchpoints(tp || []);
     if (data?.chapter_id) {
       const { data: pr } = await supabase.from("programs")
         .select("id, title, date").eq("chapter_id", data.chapter_id)
@@ -342,6 +351,22 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
     setBusy(false);
     if (error) { showToast(error.message, "error"); return; }
     showToast("Mentorship ended.");
+    load();
+  }
+
+  async function logTouchpoint() {
+    setBusy(true);
+    const { error } = await supabase.from("participant_touchpoints").insert({
+      participant_id: id,
+      mentor_id: profile.id,
+      kind: tpKind,
+      unit_ref: tpUnitRef.trim() || null,
+      note: tpNote.trim() || null,
+    });
+    setBusy(false);
+    if (error) { showToast(error.message, "error"); return; }
+    setTpUnitRef(""); setTpNote("");
+    showToast("Logged.");
     load();
   }
 
@@ -430,6 +455,55 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
           </div>
         </Card>
       ) : null}
+
+      <Card style={{ marginBottom: 14 }}>
+        <SHead>Contact log</SHead>
+        <div style={{ fontSize: 11.5, color: B.muted, marginBottom: 12, lineHeight: 1.55 }}>
+          What's been sent or discussed since the last visit. This is also what keeps this record off the quiet list.
+        </div>
+
+        {touchpoints.length === 0 ? (
+          <div style={{ fontSize: 12.5, color: B.muted, marginBottom: canEdit ? 14 : 0 }}>Nothing logged yet.</div>
+        ) : (
+          touchpoints.map((t) => (
+            <div key={t.id} style={{ border: "1px solid " + B.border, borderRadius: 8, padding: "10px 12px", marginBottom: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: B.black, fontFamily: "'Montserrat',sans-serif" }}>
+                    {t.kind === "content" ? "Content shared" : t.kind === "conversation" ? "Conversation" : "Visit"}
+                    {t.unit_ref ? " · " + t.unit_ref : ""}
+                  </div>
+                  {t.note ? <div style={{ fontSize: 12.5, color: "#333", marginTop: 3, lineHeight: 1.5 }}>{t.note}</div> : null}
+                  <div style={{ fontSize: 11.5, color: B.muted, marginTop: 3 }}>
+                    {niceDate(t.occurred_on)}{t.profiles?.full_name ? " · " + t.profiles.full_name : ""}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+
+        {canEdit ? (
+          <div style={{ marginTop: touchpoints.length ? 14 : 0, paddingTop: touchpoints.length ? 14 : 0, borderTop: touchpoints.length ? "1px solid " + B.offWhite : "none" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+              <Field label="Kind">
+                <select style={sel} value={tpKind} onChange={(e) => setTpKind(e.target.value)}>
+                  <option value="content">Content shared</option>
+                  <option value="conversation">Conversation</option>
+                  <option value="visit">Visit</option>
+                </select>
+              </Field>
+              <Field label="Unit (optional)">
+                <input style={inp} value={tpUnitRef} onChange={(e) => setTpUnitRef(e.target.value)} placeholder="e.g. IE-03" />
+              </Field>
+            </div>
+            <Field label="Note (optional)">
+              <textarea style={ta} value={tpNote} onChange={(e) => setTpNote(e.target.value)} placeholder="What was shared or talked about" />
+            </Field>
+            <button style={btnP} onClick={logTouchpoint} disabled={busy}>Log it</button>
+          </div>
+        ) : null}
+      </Card>
 
       <Card style={{ marginBottom: 14 }}>
         <SHead>Their journey</SHead>
@@ -573,6 +647,7 @@ export default function ParticipantsSection({ profile, chapters, showToast }) {
   const [people, setPeople] = useState([]);
   const [summary, setSummary] = useState([]);
   const [withdrawals, setWithdrawals] = useState([]);
+  const [quiet, setQuiet] = useState([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [stageFilter, setStageFilter] = useState("");
@@ -594,6 +669,8 @@ export default function ParticipantsSection({ profile, chapters, showToast }) {
     setSummary(s || []);
     const { data: w } = await supabase.rpc("consent_withdrawals_outstanding");
     setWithdrawals(w || []);
+    const { data: qp } = await supabase.rpc("quiet_participants");
+    setQuiet(qp || []);
     setLoading(false);
   }, []);
 
@@ -637,6 +714,19 @@ export default function ParticipantsSection({ profile, chapters, showToast }) {
         <p style={{ margin: "0 0 14px", fontSize: 12.5, color: B.muted, lineHeight: 1.6 }}>
           The young people you added or currently mentor. You will not see the rest of the chapter here.
         </p>
+      ) : null}
+
+      {quiet.length > 0 ? (
+        <div style={{ background: "#fff8e6", border: "1px solid " + B.gold, borderRadius: 8, padding: "12px 14px", marginBottom: 14, fontSize: 12.5, color: "#6b5300", lineHeight: 1.55 }}>
+          <strong>{quiet.length} {quiet.length === 1 ? "person hasn't" : "people haven't"} had any contact logged in a while.</strong>
+          <div style={{ marginTop: 6 }}>
+            {quiet.map((r) => (
+              <div key={r.participant_id} style={{ cursor: "pointer" }} onClick={() => setOpenId(r.participant_id)}>
+                {r.full_name}{r.mentor_name ? " · mentored by " + r.mentor_name : " · no mentor assigned"}
+              </div>
+            ))}
+          </div>
+        </div>
       ) : null}
 
       {chapterOverview && withdrawals.length > 0 ? (
