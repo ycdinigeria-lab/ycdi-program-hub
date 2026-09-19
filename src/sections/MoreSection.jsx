@@ -27,6 +27,8 @@ const DataProtectionSection = lazy(() => import("./DataProtectionSection.jsx"));
 const ContentSection = lazy(() => import("./ContentSection.jsx"));
 // BATCH29-MARKER more-audience
 const AudienceSection = lazy(() => import("./AudienceSection.jsx"));
+// BATCH31-MARKER more-campaigns
+const CampaignSection = lazy(() => import("./CampaignSection.jsx"));
 // BATCH7A-MARKER more-applications
 const ApplicationsSection = lazy(() => import("./ApplicationsSection.jsx"));
 // BATCH7B-MARKER more-renewals
@@ -117,6 +119,24 @@ export const MORE_FEATURES = [
     portfolio: ["COMMS", "FIN"],
     adminExempt: true,
     render: (props) => <AudienceSection {...props} />,
+  },
+  {
+    // BATCH31-MARKER more-campaigns
+    id: "campaigns",
+    category: "comms",
+    title: "Email Campaigns",
+    short: "Write, approve and send emails",
+    icon: ICONS.chat,
+    accent: B.blue,
+    // The same three doors as the audience it draws on (YCDI-STR-004 2.3):
+    // the National Coordinator, the Communications Officer and the
+    // Financial Secretary. Finance reads and cannot change anything. The
+    // Communications seat writes, the National Coordinator approves, and
+    // the database refuses anyone else, a plain admin included.
+    roles: ["NC"],
+    portfolio: ["COMMS", "FIN"],
+    adminExempt: true,
+    render: (props) => <CampaignSection {...props} />,
   },
   {
     id: "messaging",
