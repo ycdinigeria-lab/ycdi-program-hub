@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase.js";
 import { B, inp, sel, ta, btnP } from "../theme.js";
 import { Card, Field } from "../components/ui.jsx";
-import { ROLE_KINDS, roleKind, validate, statusLabel } from "../lib/application.js";
+import { ROLE_KINDS, roleKind, validate } from "../lib/application.js";
 
 // Complete My Volunteer Record.
 //
@@ -20,6 +20,19 @@ import { ROLE_KINDS, roleKind, validate, statusLabel } from "../lib/application.
 //   application on the Applications screen, flagged for the
 //   coordinator as a retrospective record, reviewed the same way a
 //   fresh application is. See Batch 24's SQL file for why.
+//
+// Two more things worth knowing before touching this file.
+//
+// - Somebody who genuinely applied through the front door before ever
+//   being appointed should never see this. The SQL side checks that on
+//   their behalf, matching by the caller's own linked_profile_id first
+//   and their email second, since the hub does not yet link an
+//   application to a profile at the point of appointment. Nothing here
+//   needs to know which way it was matched, it is `existing` either way.
+// - This renders nothing at all, not even a loading state, once a
+//   record is already on file. The whole point is to ask for something
+//   missing, so once nothing is missing it should take up no space on
+//   the profile page.
 
 const BLANK = {
   role_sought: "school_contact",
@@ -134,25 +147,29 @@ export default function CompleteVolunteerRecordSection({ profile, showToast }) {
     if (showToast) showToast("Record sent to your coordinator for review.");
   }
 
-  if (loading) {
-    return <Card><p style={{ margin: 0, fontSize: 13, color: B.muted }}>Loading…</p></Card>;
+  // While we're still checking, and once we know a record already exists
+  // (whether it was there before this page loaded, or was matched just
+  // now by email, see the SQL side), this renders nothing at all. The
+  // point of this section is to ask for something missing, so once
+  // nothing is missing it should not take up space on the profile.
+  if (loading || existing) {
+    return null;
   }
 
-  if (existing || done) {
-    const ref = done || (existing && existing.reference);
-    const status = done ? "new" : existing && existing.status;
+  // Shown once, right after a successful submit, so the person isn't left
+  // wondering whether it went through. It will not appear again after
+  // this: on the next visit `existing` will be set instead.
+  if (done) {
     return (
       <Card>
         <h1 style={{ margin: "0 0 10px", fontFamily: "'Montserrat',sans-serif", fontSize: 18, color: B.blue }}>
-          {done ? "Thank you. We have it." : "Already on file"}
+          Thank you. We have it.
         </h1>
         <p style={{ margin: "0 0 10px", fontSize: 13.5, color: B.black, lineHeight: 1.7 }}>
-          Reference <strong>{ref}</strong>, status <strong>{statusLabel(status)}</strong>.
+          Reference <strong>{done}</strong>.
         </p>
         <p style={{ margin: 0, fontSize: 12.5, color: B.muted, lineHeight: 1.7 }}>
-          {done
-            ? "Your coordinator will read this and review it, the same as any application."
-            : "If something on it needs correcting, ask your coordinator, they can update it from the Applications screen."}
+          Your coordinator will read this and review it, the same as any application.
         </p>
       </Card>
     );
