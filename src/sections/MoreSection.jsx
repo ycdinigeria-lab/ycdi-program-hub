@@ -25,6 +25,8 @@ const AuditLogSection = lazy(() => import("./AuditLogSection.jsx"));
 const DataProtectionSection = lazy(() => import("./DataProtectionSection.jsx"));
 // BATCH23-MARKER more-content
 const ContentSection = lazy(() => import("./ContentSection.jsx"));
+// BATCH29-MARKER more-audience
+const AudienceSection = lazy(() => import("./AudienceSection.jsx"));
 // BATCH7A-MARKER more-applications
 const ApplicationsSection = lazy(() => import("./ApplicationsSection.jsx"));
 // BATCH7B-MARKER more-renewals
@@ -96,6 +98,25 @@ export const MORE_FEATURES = [
     roles: ["RC", "NC"],
     portfolio: "COMMS",
     render: (props) => <ContentSection {...props} />,
+  },
+  {
+    // BATCH29-MARKER more-audience
+    id: "audience",
+    category: "comms",
+    title: "Audience",
+    short: "Contacts and the do-not-email list",
+    icon: ICONS.people,
+    accent: B.blue,
+    // Donor data is confidential (YCDI-STR-004 2.3): the National
+    // Coordinator, the Communications Officer and the Financial
+    // Secretary, and nobody else. The Financial Secretary is the FIN
+    // seat, so this card names two seats. It is adminExempt because the
+    // admin flag is a technical one and the policy does not name it; the
+    // database refuses a plain admin here as well.
+    roles: ["NC"],
+    portfolio: ["COMMS", "FIN"],
+    adminExempt: true,
+    render: (props) => <AudienceSection {...props} />,
   },
   {
     id: "messaging",
@@ -332,7 +353,9 @@ export function visibleMoreFeatures(profile) {
       // ends up on whoever keeps the system running, so those cards say
       // so with adminExempt and the database refuses them as well.
       const adminMayEnter = profile.is_admin && !f.adminExempt;
-      const holdsSeat = f.portfolio && (profile.portfolios || []).includes(f.portfolio);
+      // A card names one seat or a list of seats (Batch 29).
+      const holdsSeat = f.portfolio
+        && [].concat(f.portfolio).some((code) => (profile.portfolios || []).includes(code));
       const allowed = f.roles.includes(profile.role)
         || holdsSeat
         || (f.id === "safeguarding" ? profile.is_safeguarding_lead : adminMayEnter);
