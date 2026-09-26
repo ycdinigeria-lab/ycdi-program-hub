@@ -31,6 +31,8 @@ const AudienceSection = lazy(() => import("./AudienceSection.jsx"));
 const CampaignSection = lazy(() => import("./CampaignSection.jsx"));
 // BATCH32-MARKER more-finance
 const FinanceSection = lazy(() => import("./FinanceSection.jsx"));
+// BATCH33-MARKER more-grants
+const GrantsSection = lazy(() => import("./GrantsSection.jsx"));
 // BATCH7A-MARKER more-applications
 const ApplicationsSection = lazy(() => import("./ApplicationsSection.jsx"));
 // BATCH7B-MARKER more-renewals
@@ -206,6 +208,27 @@ export const MORE_FEATURES = [
     // opened inside the screen and by the database for the NC, the FIN
     // seat and the TREAS seat, not by hiding the card.
     render: (props) => <FinanceSection {...props} />,
+  },
+  {
+    // BATCH33-MARKER more-grants
+    id: "grants",
+    category: "people",
+    title: "Grants",
+    short: "Grants and restricted funds",
+    icon: ICONS.badge,
+    accent: B.blue,
+    // The seats that fund and account for grants: the Deputy National
+    // Coordinator (partnerships and fundraising, its first access), the
+    // Financial Secretary, the National Coordinator, and the Treasurer to
+    // read. A Regional Coordinator is let in because a grant funding a
+    // programme in their chapter is theirs to see; the database narrows
+    // that to their own chapter. A plain member and a plain admin are
+    // refused, here and in the database, so this names roles and seats and
+    // marks itself adminExempt.
+    roles: ["NC", "RC"],
+    portfolio: ["DNC", "FIN", "TREAS"],
+    adminExempt: true,
+    render: (props) => <GrantsSection {...props} />,
   },
   {
     id: "applications",
