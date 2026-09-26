@@ -13,6 +13,7 @@ export const PORTFOLIOS = [
   { code: "PD",    label: "National Programmes Director",    duty: "Spiritual formation, curriculum and M&E" },
   { code: "VC",    label: "National Volunteer Coordinator",  duty: "Safeguarding compliance administration" },
   { code: "COMMS", label: "National Communications Officer", duty: "Alumni network communication" },
+  { code: "TREAS", label: "Board Treasurer",                  duty: "Finance oversight (read-only)" },
 ];
 
 export const PORTFOLIO_LABEL = Object.fromEntries(PORTFOLIOS.map((p) => [p.code, p.label]));

@@ -29,6 +29,8 @@ const ContentSection = lazy(() => import("./ContentSection.jsx"));
 const AudienceSection = lazy(() => import("./AudienceSection.jsx"));
 // BATCH31-MARKER more-campaigns
 const CampaignSection = lazy(() => import("./CampaignSection.jsx"));
+// BATCH32-MARKER more-finance
+const FinanceSection = lazy(() => import("./FinanceSection.jsx"));
 // BATCH7A-MARKER more-applications
 const ApplicationsSection = lazy(() => import("./ApplicationsSection.jsx"));
 // BATCH7B-MARKER more-renewals
@@ -190,6 +192,20 @@ export const MORE_FEATURES = [
     // cannot open.
     roles: ["NC", "RC"],
     render: (props) => <VolunteersSection {...props} />,
+  },
+  {
+    // BATCH32-MARKER more-finance
+    id: "finance",
+    category: "people",
+    title: "Finance",
+    short: "Expense claims and budgets",
+    icon: ICONS.ledger,
+    accent: B.blue,
+    // No roles key, so every member sees it: anyone can claim back what
+    // they spent. The extra reach (all claims, budgets, deciding) is
+    // opened inside the screen and by the database for the NC, the FIN
+    // seat and the TREAS seat, not by hiding the card.
+    render: (props) => <FinanceSection {...props} />,
   },
   {
     id: "applications",
