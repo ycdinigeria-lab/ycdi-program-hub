@@ -33,6 +33,10 @@ const CampaignSection = lazy(() => import("./CampaignSection.jsx"));
 const FinanceSection = lazy(() => import("./FinanceSection.jsx"));
 // BATCH33-MARKER more-grants
 const GrantsSection = lazy(() => import("./GrantsSection.jsx"));
+// BATCH34-MARKER more-donations
+const DonationsSection = lazy(() => import("./DonationsSection.jsx"));
+// BATCH35-MARKER more-annualbudget
+const AnnualBudgetSection = lazy(() => import("./AnnualBudgetSection.jsx"));
 // BATCH7A-MARKER more-applications
 const ApplicationsSection = lazy(() => import("./ApplicationsSection.jsx"));
 // BATCH7B-MARKER more-renewals
@@ -229,6 +233,42 @@ export const MORE_FEATURES = [
     portfolio: ["DNC", "FIN", "TREAS"],
     adminExempt: true,
     render: (props) => <GrantsSection {...props} />,
+  },
+  {
+    // BATCH34-MARKER more-donations
+    id: "donations",
+    category: "people",
+    title: "Donations",
+    short: "Gifts received and donor giving",
+    icon: ICONS.hands,
+    accent: B.blue,
+    // Donor records are the Financial Secretary's to keep (FIN) and the
+    // National Coordinator's; the Deputy (fundraising) and the Treasurer
+    // read. Donor data is confidential (YCDI-STR-004 2.3), so this names
+    // seats and roles and marks itself adminExempt: no plain admin, no
+    // Regional Coordinator, no ordinary member, here or in the database.
+    roles: ["NC"],
+    portfolio: ["FIN", "DNC", "TREAS"],
+    adminExempt: true,
+    render: (props) => <DonationsSection {...props} />,
+  },
+  {
+    // BATCH35-MARKER more-annualbudget
+    id: "annualbudget",
+    category: "people",
+    title: "Annual Budget",
+    short: "The year's plan and the year against it",
+    icon: ICONS.chart,
+    accent: B.blue,
+    // The Financial Secretary prepares, the Board (NC or Treasurer)
+    // approves, the Deputy reads. A Regional Coordinator is let in because
+    // a chapter may see its own allocation; the database narrows that to
+    // their own chapter's expenditure lines. No plain admin, no ordinary
+    // member, here or in the database.
+    roles: ["NC", "RC"],
+    portfolio: ["FIN", "TREAS", "DNC"],
+    adminExempt: true,
+    render: (props) => <AnnualBudgetSection {...props} />,
   },
   {
     id: "applications",
