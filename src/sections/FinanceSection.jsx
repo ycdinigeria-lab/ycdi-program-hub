@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "../lib/supabase.js";
+import { fetchAllRows, mergeById } from "../lib/fetchAll.js";
 import { humanise } from "../lib/errors.js";
 import { compressImage } from "../lib/imageCompress.js";
 import { B, inp, sel, ta, btnP, btnG, btnR } from "../theme.js";
@@ -439,6 +440,27 @@ function ReviseBox({ row, busy, onConfirm, onCancel }) {
 // ---------------------------------------------------------------------------
 // The screen
 // ---------------------------------------------------------------------------
+// BATCH36-MARKER claims-complete
+// Claims that still need somebody to act on them are always loaded, however
+// old. So is every claim the signed-in person made, because their own
+// totals are added up from the list. Only other people's closed claims
+// (paid, rejected, withdrawn) are trimmed to the newest few hundred.
+const OPEN_CLAIM = ["draft", "submitted", "returned", "approved"];
+const CLOSED_SHOWN = 300;
+
+async function loadClaims(profileId) {
+  const byNewest = (q) => q.order("created_at", { ascending: false }).order("id");
+  const [open, own, closed] = await Promise.all([
+    fetchAllRows(() => byNewest(supabase.from("expense_claims").select("*").in("status", OPEN_CLAIM))),
+    fetchAllRows(() => byNewest(supabase.from("expense_claims").select("*").eq("claimant_id", profileId))),
+    byNewest(supabase.from("expense_claims").select("*").not("status", "in", `(${OPEN_CLAIM.join(",")})`)).range(0, CLOSED_SHOWN - 1),
+  ]);
+  const error = open.error || own.error || closed.error || null;
+  const data = mergeById(open.data, own.data, closed.data)
+    .sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
+  return { data, error, closedCapped: (closed.data || []).length >= CLOSED_SHOWN };
+}
+
 export default function FinanceSection({ profile, chapters, showToast }) {
   const readAll = canReadAll(profile);
   const chapterReader = isChapterReader(profile);
@@ -446,6 +468,7 @@ export default function FinanceSection({ profile, chapters, showToast }) {
 
   const [tab, setTab] = useState("mine");
   const [claims, setClaims] = useState([]);
+  const [closedCapped, setClosedCapped] = useState(false);
   const [summary, setSummary] = useState([]);
   const [overview, setOverview] = useState(null);
   const [programmes, setProgrammes] = useState([]);
@@ -467,7 +490,7 @@ export default function FinanceSection({ profile, chapters, showToast }) {
   const load = useCallback(async () => {
     setErr("");
     const jobs = [
-      supabase.from("expense_claims").select("*").order("created_at", { ascending: false }).limit(300),
+      loadClaims(profile.id),
       supabase.from("nec_portfolios").select("profile_id").eq("portfolio", "FIN").maybeSingle(),
     ];
     if (profile.chapter_id) {
@@ -489,12 +512,13 @@ export default function FinanceSection({ profile, chapters, showToast }) {
       return;
     }
     setClaims(cl.data || []);
+    setClosedCapped(!!cl.closedCapped);
     setFinHolder(fin.data ? fin.data.profile_id : null);
     setProgrammes(pr.data || []);
     setSummary(su.data || []);
     setOverview(ov.data && ov.data[0] ? ov.data[0] : null);
     setLoading(false);
-  }, [profile.chapter_id, readAll, seesBudgets]);
+  }, [profile.id, profile.chapter_id, readAll, seesBudgets]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { setOpenId(null); setMode("view"); setComposing(false); setRevising(null); }, [tab]);
@@ -730,6 +754,11 @@ export default function FinanceSection({ profile, chapters, showToast }) {
             ))}
           </div>
           {renderClaims(shown, "Nothing here.")}
+          {closedCapped && (filter === "all" || filter === "paid" || filter === "other") ? (
+            <p style={{ fontSize: 12, color: B.muted, margin: "10px 0 0", lineHeight: 1.6 }}>
+              Every open claim is here. Closed claims (paid, declined or withdrawn) show the newest {CLOSED_SHOWN}; older ones are kept on record and are counted in the totals above.
+            </p>
+          ) : null}
         </div>
       ) : null}
 

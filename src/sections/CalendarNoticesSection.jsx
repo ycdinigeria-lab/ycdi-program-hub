@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase.js";
+import { fetchAllRows } from "../lib/fetchAll.js";
 import { B, inp, ta, sel, btnP, btnG } from "../theme.js";
 import { Card, SHead, Field } from "../components/ui.jsx";
 
@@ -217,8 +218,12 @@ function CommentThread({ comments, profile, onAdd, onDelete }) {
   );
 }
 
+// How many notices the board shows. Older ones stay in the database.
+const NOTICE_LIMIT = 100;
+
 function AnnouncementsView({ profile, chapters, showToast }) {
   const [rows, setRows] = useState([]);
+  const [noticesCapped, setNoticesCapped] = useState(false);
   const [loading, setLoading] = useState(true);
   const [composing, setComposing] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -232,12 +237,20 @@ function AnnouncementsView({ profile, chapters, showToast }) {
 
   async function load() {
     setLoading(true);
-    const [ann, react, comm] = await Promise.all([
-      supabase.from("announcements").select("*").order("created_at", { ascending: false }),
-      supabase.from("announcement_reactions").select("id,announcement_id,user_id,reaction"),
-      supabase.from("announcement_comments").select("*").order("created_at", { ascending: true }),
-    ]);
-    setRows(ann.data || []);
+    // BATCH36-MARKER notices-bounded
+    // The newest notices only, and only the reactions and comments that
+    // belong to them. Before, every reaction and comment ever made was
+    // downloaded on every visit, which grows without end.
+    const ann = await supabase.from("announcements").select("*")
+      .order("created_at", { ascending: false }).order("id").range(0, NOTICE_LIMIT - 1);
+    const annRows = ann.data || [];
+    const ids = annRows.map((a) => a.id);
+    const [react, comm] = ids.length ? await Promise.all([
+      fetchAllRows(() => supabase.from("announcement_reactions").select("id,announcement_id,user_id,reaction").in("announcement_id", ids).order("id")),
+      fetchAllRows(() => supabase.from("announcement_comments").select("*").in("announcement_id", ids).order("created_at", { ascending: true }).order("id")),
+    ]) : [{ data: [] }, { data: [] }];
+    setRows(annRows);
+    setNoticesCapped(annRows.length >= NOTICE_LIMIT);
     setReactions(react.data || []);
     setComments(comm.data || []);
     setLoading(false);
@@ -334,6 +347,11 @@ function AnnouncementsView({ profile, chapters, showToast }) {
           </Card>
         ))
       )}
+      {!loading && noticesCapped ? (
+        <div style={{ fontSize: 12, color: B.muted, textAlign: "center", padding: "6px 0 2px" }}>
+          Showing the latest {NOTICE_LIMIT} announcements. Older ones are kept but not listed here.
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -412,7 +430,7 @@ function CalendarView({ profile, chapters, showToast }) {
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from("events").select("*").order("event_date", { ascending: true });
+    const { data } = await fetchAllRows(() => supabase.from("events").select("*").order("event_date", { ascending: true }).order("id"));
     setRows(data || []);
     setLoading(false);
   }

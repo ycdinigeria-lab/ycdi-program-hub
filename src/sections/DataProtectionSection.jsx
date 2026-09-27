@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "../lib/supabase.js";
+import { fetchAllRows } from "../lib/fetchAll.js";
 import { B, inp, sel, ta, btnP, btnG } from "../theme.js";
 import { Card, SHead, Field } from "../components/ui.jsx";
 
@@ -59,8 +60,9 @@ export default function DataProtectionSection({ profile, showToast }) {
   const load = useCallback(async () => {
     setLoading(true); setErr("");
     const [r, b, dr, db] = await Promise.all([
-      supabase.from("data_subject_requests").select("*").order("due_on", { ascending: true }),
-      supabase.from("data_breaches").select("*").order("discovered_on", { ascending: false }),
+      // BATCH36-MARKER fetch-all-use: a legal register must never be quietly partial.
+      fetchAllRows(() => supabase.from("data_subject_requests").select("*").order("due_on", { ascending: true }).order("id")),
+      fetchAllRows(() => supabase.from("data_breaches").select("*").order("discovered_on", { ascending: false }).order("id")),
       supabase.rpc("dsr_needing_action"),
       supabase.rpc("breaches_needing_action"),
     ]);

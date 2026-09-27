@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "../lib/supabase.js";
+import { fetchAllRows } from "../lib/fetchAll.js";
 import { B, inp, sel, ta, btnP, btnG } from "../theme.js";
 import { Card, SHead, Field } from "../components/ui.jsx";
 
@@ -64,10 +65,12 @@ export default function ContentSection({ profile, chapters, showToast }) {
     setLoading(true); setErr("");
     // One read. Row security returns exactly what this person may see:
     // their own posts, plus any waiting on them as approver.
-    const { data, error } = await supabase
+  // BATCH36-MARKER fetch-all-use: read in pages so the list stays complete past 1,000 rows.
+    const { data, error } = await fetchAllRows(() => supabase
       .from("content_items")
       .select("*")
-      .order("updated_at", { ascending: false });
+      .order("updated_at", { ascending: false })
+      .order("id"));
     if (error) {
       setErr("Could not load the queue. If this keeps happening, the Batch 23 database script may not have been run yet.");
       setLoading(false);

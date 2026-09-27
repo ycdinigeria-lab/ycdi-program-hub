@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "../lib/supabase.js";
+import { fetchAllRows } from "../lib/fetchAll.js";
 import { B, inp, sel, ta, btnP, btnR, btnG } from "../theme.js";
 import { Card, Field } from "../components/ui.jsx";
 import { liveRegionProps } from "../lib/a11y.js";
@@ -47,7 +48,8 @@ export default function CampaignSection({ profile, showToast }) {
   const load = useCallback(async () => {
     setErr("");
     const [c, s, p, k] = await Promise.all([
-      supabase.from("email_campaigns").select("*").order("updated_at", { ascending: false }),
+      // BATCH36-MARKER fetch-all-use
+      fetchAllRows(() => supabase.from("email_campaigns").select("*").order("updated_at", { ascending: false }).order("id")),
       supabase.from("email_senders").select("*").order("label"),
       supabase.from("email_providers").select("*").order("label"),
       supabase.rpc("audience_segment_counts"),

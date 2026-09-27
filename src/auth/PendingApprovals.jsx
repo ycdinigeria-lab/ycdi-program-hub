@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase.js";
+import { fetchAllRows } from "../lib/fetchAll.js";
 import { B } from "../theme.js";
 import { Card, SHead } from "../components/ui.jsx";
 
@@ -42,7 +43,8 @@ export default function PendingApprovals() {
 
   async function load() {
     const [{ data: p }, { data: chData }] = await Promise.all([
-      supabase.from("pending_signups").select("*").order("created_at", { ascending: true }),
+      // BATCH36-MARKER fetch-all-use
+      fetchAllRows(() => supabase.from("pending_signups").select("*").order("created_at", { ascending: true }).order("id")),
       supabase.from("chapters").select("*").order("name"),
     ]);
     setRows(p || []);

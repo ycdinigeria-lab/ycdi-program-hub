@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../lib/supabase.js";
+import { fetchAllRows } from "../lib/fetchAll.js";
 import { B, inp, ta, btnP, btnG } from "../theme.js";
 import { Card, SHead, Field, StatCard } from "../components/ui.jsx";
 import { srOnly } from "../lib/a11y.js";
@@ -60,10 +61,12 @@ export default function ApplicationsSection({ profile, showToast }) {
 
   async function load() {
     setLoading(true);
-    const { data, error } = await supabase
+  // BATCH36-MARKER fetch-all-use: read in pages so the list stays complete past 1,000 rows.
+    const { data, error } = await fetchAllRows(() => supabase
       .from("volunteer_applications")
       .select("*")
-      .order("submitted_at", { ascending: false });
+      .order("submitted_at", { ascending: false })
+      .order("id"));
     if (error) showToast(error.message, "error");
     else setApps(sortForReview(data || []));
     setLoading(false);
