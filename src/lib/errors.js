@@ -1,6 +1,6 @@
 import { supabase } from "./supabase.js";
 
-export const APP_VERSION = "2.28.0";
+export const APP_VERSION = "2.29.0";
 
 // Raw database and network errors are written for developers. This turns
 // the ones people actually hit into something a coordinator on a phone

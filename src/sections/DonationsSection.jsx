@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "../lib/supabase.js";
+import { fetchAllRows, mergeById } from "../lib/fetchAll.js";
 import { humanise } from "../lib/errors.js";
 import { B, inp, sel, ta, btnP, btnG, btnR } from "../theme.js";
 import { Card, SHead, Field, StatCard } from "../components/ui.jsx";
@@ -185,12 +186,33 @@ export function DonorTable({ rows }) {
 // ---------------------------------------------------------------------------
 // The screen
 // ---------------------------------------------------------------------------
+
+// BATCH36-MARKER donations-complete
+// Totals and donor tiers are worked out by the database, so the list here
+// is history. It shows the newest few hundred gifts, and always every
+// active gift that has not been thanked yet, however old, so the
+// "not yet acknowledged" view can never quietly lose one.
+const HISTORY_SHOWN = 500;
+
+async function loadDonations() {
+  const byNewest = (q) => q.order("received_on", { ascending: false }).order("id");
+  const [recent, unthanked] = await Promise.all([
+    byNewest(supabase.from("donations").select("*")).range(0, HISTORY_SHOWN - 1),
+    fetchAllRows(() => byNewest(supabase.from("donations").select("*").eq("status", "active").eq("acknowledged", false))),
+  ]);
+  const error = recent.error || unthanked.error || null;
+  const data = mergeById(recent.data, unthanked.data)
+    .sort((a, b) => String(b.received_on || "").localeCompare(String(a.received_on || "")));
+  return { data, error, capped: (recent.data || []).length >= HISTORY_SHOWN };
+}
+
 export default function DonationsSection({ profile, showToast }) {
   const canManage = canManageDonations(profile);
   const canRead = canReadDonations(profile);
 
   const [tab, setTab] = useState("gifts");
   const [donations, setDonations] = useState([]);
+  const [historyCapped, setHistoryCapped] = useState(false);
   const [byDonor, setByDonor] = useState([]);
   const [overview, setOverview] = useState(null);
   const [donors, setDonors] = useState([]);
@@ -206,7 +228,7 @@ export default function DonationsSection({ profile, showToast }) {
   const load = useCallback(async () => {
     setErr("");
     const jobs = [
-      supabase.from("donations").select("*").order("received_on", { ascending: false }).limit(500),
+      loadDonations(),
       supabase.rpc("donation_overview", { p_year: year }),
       supabase.rpc("donation_by_donor", { p_year: year }),
     ];
@@ -220,6 +242,7 @@ export default function DonationsSection({ profile, showToast }) {
       setLoading(false); return;
     }
     setDonations(dn.data || []);
+    setHistoryCapped(!!dn.capped);
     setOverview(ov.data && ov.data[0] ? ov.data[0] : null);
     setByDonor(bd.data || []);
     setDonors(dr.data || []);
@@ -327,6 +350,11 @@ export default function DonationsSection({ profile, showToast }) {
               onAcknowledge={(x) => run(() => supabase.rpc("acknowledge_donation", { p_id: x.id }), "Marked acknowledged.")}
               onVoid={onVoid} />
           ))}
+          {historyCapped && filter !== "unacknowledged" ? (
+            <p style={{ fontSize: 12, color: B.muted, margin: "10px 0 0", lineHeight: 1.6 }}>
+              Showing the newest {HISTORY_SHOWN} gifts, plus every gift still waiting for a thank-you. Older gifts are kept on record and are counted in the totals above.
+            </p>
+          ) : null}
         </div>
       ) : (
         <DonorTable rows={byDonor} />

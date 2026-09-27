@@ -1,0 +1,33 @@
+# BATCH36-MARKER gitignore
+#
+# This repository is public. Anything listed here never leaves your
+# computer through GitHub Desktop, even if it sits in the folder.
+
+# Secrets. Keys belong in Netlify's environment settings, never in a file here.
+.env
+.env.*
+*.pem
+*.key
+service-account*.json
+
+# Installed libraries and build output. Netlify rebuilds both itself.
+node_modules/
+dist/
+.netlify/
+
+# Local test databases and scratch output from the _harness scripts
+*.log
+/tmp/
+coverage/
+
+# Operating system and editor clutter
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Schema snapshot results can hold live data about people. Commit the
+# cleaned SQL, never the raw export.
+schema-export*.csv
+schema-export*.json

@@ -6,6 +6,7 @@
 // only read.
 import { useState, useEffect, useCallback, useMemo, useId } from "react";
 import { supabase } from "../lib/supabase.js";
+import { fetchAllRows } from "../lib/fetchAll.js";
 import { B, STATUS_CFG, btnP } from "../theme.js";
 import { Card, SHead, StatCard, MiniBar, Badge } from "../components/ui.jsx";
 import {
@@ -147,15 +148,21 @@ export default function DashboardSection({ profile, chapters, onOpenProgram, onN
     // The same shape ProgrammesSection uses. Written out again rather than
     // shared, because the two screens load at different moments and one
     // waiting on the other would leave the dashboard blank on arrival.
-    let q = supabase
-      .from("programs")
-      .select("*, chapters(name), reports(*)")
-      .order("created_at", { ascending: false });
+    let chapterId = null;
     if (profile.role !== "NC" && profile.chapter_name) {
       const { data: ch } = await supabase.from("chapters").select("id").eq("name", profile.chapter_name).single();
-      if (ch) q = q.eq("chapter_id", ch.id);
+      if (ch) chapterId = ch.id;
     }
-    const { data } = await q;
+    // BATCH36-MARKER fetch-all-use: every programme, read in pages.
+    const { data } = await fetchAllRows(() => {
+      let q = supabase
+        .from("programs")
+        .select("*, chapters(name), reports(*)")
+        .order("created_at", { ascending: false })
+        .order("id");
+      if (chapterId) q = q.eq("chapter_id", chapterId);
+      return q;
+    });
     if (data) {
       setPrograms(data.map((p) => ({
         ...p,

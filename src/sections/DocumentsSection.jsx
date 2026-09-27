@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "../lib/supabase.js";
+import { fetchAllRows } from "../lib/fetchAll.js";
 import { B, inp, ta, sel, btnP, btnG } from "../theme.js";
 import { Card, SHead, Field } from "../components/ui.jsx";
 import { usePaged } from "../lib/paging.js";
@@ -399,7 +400,8 @@ export default function DocumentsSection({ profile, showToast }) {
     setLoading(true);
     const [{ data: c, error: ce }, { data: d, error: de }] = await Promise.all([
       supabase.from("document_categories").select("*").order("sort_order", { ascending: true }).order("name", { ascending: true }),
-      supabase.from("documents").select("*").order("created_at", { ascending: false }),
+      // BATCH36-MARKER fetch-all-use
+      fetchAllRows(() => supabase.from("documents").select("*").order("created_at", { ascending: false }).order("id")),
     ]);
     if (ce || de) {
       setErr("Could not load the documents library right now. If this keeps happening, the Stage 3 database script may not have been run yet.");

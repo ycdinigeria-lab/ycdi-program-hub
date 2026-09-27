@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "../lib/supabase.js";
+import { fetchAllRows } from "../lib/fetchAll.js";
 import { B, inp, sel, ta, btnP, btnR, btnG } from "../theme.js";
 import { Card, SHead, Field } from "../components/ui.jsx";
 import { useIsMobile } from "../useIsMobile.js";
@@ -530,7 +531,8 @@ export default function ReportsSection({ profile, chapters, showToast }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("submissions").select("*").order("updated_at", { ascending: false });
+  // BATCH36-MARKER fetch-all-use: read in pages so the list stays complete past 1,000 rows.
+    const { data, error } = await fetchAllRows(() => supabase.from("submissions").select("*").order("updated_at", { ascending: false }).order("id"));
     if (error) showToast(error.message, "error");
     setRows(data || []);
     setLoading(false);
