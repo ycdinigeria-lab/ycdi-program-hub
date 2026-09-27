@@ -1,0 +1,48 @@
+# Security headers for the whole hub. Netlify reads this file from the
+# published folder, and Vite copies everything in public/ into it, so
+# this is the one place these live.
+#
+# BATCH36-MARKER headers
+#
+# What each line is for, in plain terms:
+#
+#   Content-Security-Policy  Lists where the page may load code, styles,
+#                            fonts and data from. If someone ever managed
+#                            to slip a script into a record, the browser
+#                            would refuse to run it, because inline
+#                            scripts and unknown hosts are not on the list.
+#   Strict-Transport-Security  Browsers only ever talk to the hub over
+#                            https once they have seen it once.
+#   X-Frame-Options / frame-ancestors  Nobody can load the hub inside
+#                            their own page to trick a volunteer into
+#                            clicking something.
+#   Referrer-Policy          Addresses inside the hub (which can carry
+#                            record ids) are not leaked to other sites.
+#   Permissions-Policy       The hub never needs the camera, microphone
+#                            or location, so the browser is told to
+#                            refuse them outright.
+#
+# Styles allow 'unsafe-inline' because the screens use React <style>
+# blocks for fonts and layout. Scripts do not: every script is a built
+# file from this site. If a new outside service is added (a new image
+# host, an analytics tool), it has to be added here or it will be
+# blocked. That is deliberate.
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://dnympoqsnrlgsvhznsjb.supabase.co wss://dnympoqsnrlgsvhznsjb.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+
+# The service worker must always be fetched fresh, or a fix to it can
+# sit unused on phones for a day.
+/sw.js
+  Cache-Control: no-cache
+
+# Built files have a content hash in their names, so they never change
+# under the same name and can be kept for a year.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

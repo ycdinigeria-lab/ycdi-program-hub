@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "../lib/supabase.js";
+import { fetchAllRows } from "../lib/fetchAll.js";
 import { B, inp, sel, ta, btnP, btnG } from "../theme.js";
 import { Card, SHead, Field } from "../components/ui.jsx";
 
@@ -67,8 +68,10 @@ export default function AudienceSection({ profile, chapters, showToast }) {
     setErr("");
     // Three separate reads, one per table, each under its own row rules.
     const [c, s, k] = await Promise.all([
-      supabase.from("audience_contacts").select("*").order("full_name"),
-      supabase.from("email_suppressions").select("*").order("created_at", { ascending: false }),
+      // BATCH36-MARKER fetch-all-use: the do-not-email list in particular
+      // must be whole, or a stopped address would show as reachable.
+      fetchAllRows(() => supabase.from("audience_contacts").select("*").order("full_name").order("id")),
+      fetchAllRows(() => supabase.from("email_suppressions").select("*").order("created_at", { ascending: false }).order("email")),
       supabase.rpc("audience_segment_counts"),
     ]);
     if (c.error || s.error || k.error) {

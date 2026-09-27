@@ -1,20 +1,18 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../lib/supabase.js";
 import { B, inp, sel, ta, btnP, btnG } from "../theme.js";
 import { Card, SHead, Field, StatCard } from "../components/ui.jsx";
-import { usePaged } from "../lib/paging.js";
 import { ShowMore } from "../components/ShowMore.jsx";
+import { participantListQuery, serverPaged, cleanNeedle, QUIET_NAMED } from "../lib/participantSearch.js";
 
 export const STAGES = ["Contact", "Connect", "Commit", "Grow", "Multiply"];
 export const AGE_BANDS = ["10-12", "13-15", "16-17", "18+"];
 
-// A hard ceiling on how many rows are ever pulled in one go. Well above
-// anything YCDI holds today, and it stops a future chapter with thousands
-// of names from freezing a phone. If it is ever hit the screen says so
-// rather than quietly showing a partial list.
+// The list is fetched from the database one page at a time, and search
+// runs in the database too, so there is no ceiling on how many young
+// people a chapter can hold. See src/lib/participantSearch.js.
 //
-// BATCH4-MARKER participants-paging
-const MAX_ROWS = 2000;
+// BATCH36-MARKER participants-server-search
 
 const STAGE_COLOUR = {
   Contact: B.muted,
@@ -875,59 +873,105 @@ function ParticipantDetail({ id, profile, onBack, showToast }) {
 // The section
 // ------------------------------------------------------------
 export default function ParticipantsSection({ profile, chapters, showToast }) {
-  const [people, setPeople] = useState([]);
   const [summary, setSummary] = useState([]);
   const [withdrawals, setWithdrawals] = useState([]);
   const [quiet, setQuiet] = useState([]);
+  const [quietTotal, setQuietTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
+  const [needle, setNeedle] = useState("");
   const [stageFilter, setStageFilter] = useState("");
   const [adding, setAdding] = useState(false);
   const [openId, setOpenId] = useState(null);
 
+  // The list itself: one page at a time from the database.
+  const [rows, setRows] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [listBusy, setListBusy] = useState(true);
+  const [moreBusy, setMoreBusy] = useState(false);
+  const [listErr, setListErr] = useState("");
+  const [listKey, setListKey] = useState(0);
+  const pageRef = useRef(0);
+  const reqRef = useRef(0);
+
   const canAdd = canAddParticipant(profile);
 
+  // Stage counts, consent withdrawals and the quiet list: the parts of the
+  // screen that are not the list.
   const load = useCallback(async () => {
     setLoading(true);
-    // Age band is not drawn in the list, so it is not fetched for the list.
-    // The detail screen loads the full row when one is opened.
-    const { data } = await supabase.from("participants")
-      .select("id, full_name, class_level, school, stage, active, chapter_id, chapters(name)")
-      .order("full_name")
-      .range(0, MAX_ROWS - 1);
-    setPeople(data || []);
     const { data: s } = await supabase.rpc("stage_summary", { p_chapter: null });
     setSummary(s || []);
     const { data: w } = await supabase.rpc("consent_withdrawals_outstanding");
     setWithdrawals(w || []);
-    const { data: qp } = await supabase.rpc("quiet_participants");
+    // Only the longest-quiet few are named. The count is the whole number,
+    // so a coordinator still sees the size of the problem.
+    const { data: qp, count: qn } = await supabase
+      .rpc("quiet_participants", {}, { count: "exact" })
+      .order("last_activity", { ascending: true })
+      .range(0, QUIET_NAMED - 1);
     setQuiet(qp || []);
+    setQuietTotal(typeof qn === "number" ? qn : (qp || []).length);
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  // Searching still runs across every participant that was loaded. Only the
-  // drawing is limited, so nobody can be missed by a search.
-  const matches = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    return people.filter((p) => {
-      if (stageFilter && p.stage !== stageFilter) return false;
-      if (!needle) return true;
-      return [p.full_name, p.school, p.class_level, p.chapters?.name].filter(Boolean).some((v) => v.toLowerCase().includes(needle));
-    });
-  }, [people, q, stageFilter]);
+  // Wait until typing pauses before asking the database, so one search is
+  // one request rather than one per key press on a slow connection.
+  useEffect(() => {
+    const t = setTimeout(() => setNeedle(cleanNeedle(q)), 300);
+    return () => clearTimeout(t);
+  }, [q]);
 
-  // Hooks have to run on every render, so this sits above the early returns
-  // rather than down beside the list it feeds.
-  const paged = usePaged(matches, q + "\u0000" + stageFilter);
+  // The chapter list only matters for "search by chapter name". Keyed by
+  // its contents, not the array itself, so a parent that rebuilds the
+  // array on every render cannot start a fetch loop.
+  const chaptersRef = useRef(chapters);
+  chaptersRef.current = chapters;
+  const chapterSig = (chapters || []).map((c) => c.id + ":" + c.name).join("|");
+
+  const fetchPage = useCallback(async (pageIndex) => {
+    const mine = ++reqRef.current;
+    if (pageIndex === 0) setListBusy(true); else setMoreBusy(true);
+    setListErr("");
+    const { data, count, error } = await participantListQuery(
+      supabase.from("participants"),
+      { needle, stage: stageFilter, chapters: chaptersRef.current, pageIndex }
+    );
+    // A slower, older search must never overwrite a newer one.
+    if (mine !== reqRef.current) return;
+    if (error) {
+      setListErr("Could not load participants. Check your connection and try again.");
+    } else {
+      pageRef.current = pageIndex;
+      setRows((prev) => (pageIndex === 0 ? (data || []) : prev.concat(data || [])));
+      if (typeof count === "number") setTotal(count);
+    }
+    setListBusy(false);
+    setMoreBusy(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needle, stageFilter, chapterSig]);
+
+  // A new search, a new stage filter, or coming back from a record starts
+  // the list again from the top.
+  useEffect(() => { fetchPage(0); }, [fetchPage, listKey]);
+
+  const reloadAll = () => { load(); setListKey((k) => k + 1); };
+
+  const paged = serverPaged({
+    loaded: rows.length,
+    total,
+    onMore: () => fetchPage(pageRef.current + 1),
+  });
+  paged.busy = moreBusy;
 
   if (openId) {
-    return <ParticipantDetail id={openId} profile={profile} showToast={showToast} onBack={() => { setOpenId(null); load(); }} />;
+    return <ParticipantDetail id={openId} profile={profile} showToast={showToast} onBack={() => { setOpenId(null); reloadAll(); }} />;
   }
 
   if (adding) {
-    return <AddParticipant profile={profile} chapters={chapters} showToast={showToast} onCancel={() => setAdding(false)} onSaved={() => { setAdding(false); load(); }} />;
+    return <AddParticipant profile={profile} chapters={chapters} showToast={showToast} onCancel={() => setAdding(false)} onSaved={() => { setAdding(false); reloadAll(); }} />;
   }
 
   if (loading) return <Card style={{ textAlign: "center", padding: 30, color: B.muted, fontSize: 13 }}>Loading participants…</Card>;
@@ -947,16 +991,21 @@ export default function ParticipantsSection({ profile, chapters, showToast }) {
         </p>
       ) : null}
 
-      {quiet.length > 0 ? (
+      {quietTotal > 0 ? (
         <div style={{ background: "#fff8e6", border: "1px solid " + B.gold, borderRadius: 8, padding: "12px 14px", marginBottom: 14, fontSize: 12.5, color: "#6b5300", lineHeight: 1.55 }}>
-          <strong>{quiet.length} {quiet.length === 1 ? "person hasn't" : "people haven't"} had any contact logged in a while.</strong>
+          <strong>{quietTotal} {quietTotal === 1 ? "person hasn't" : "people haven't"} had any contact logged in a while.</strong>
           <div style={{ marginTop: 6 }}>
             {quiet.map((r) => (
-              <div key={r.participant_id} style={{ cursor: "pointer" }} onClick={() => setOpenId(r.participant_id)}>
+              <div key={r.participant_id + (r.mentor_id || "")} style={{ cursor: "pointer" }} onClick={() => setOpenId(r.participant_id)}>
                 {r.full_name}{r.mentor_name ? " · mentored by " + r.mentor_name : " · no mentor assigned"}
               </div>
             ))}
           </div>
+          {quietTotal > quiet.length ? (
+            <div style={{ marginTop: 6, fontStyle: "italic" }}>
+              These are the {quiet.length} who have been quiet longest. {quietTotal - quiet.length} more are not named here.
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -990,28 +1039,41 @@ export default function ParticipantsSection({ profile, chapters, showToast }) {
         </div>
       </Card>
 
-      {people.length >= MAX_ROWS ? (
-        <div style={{ background: B.yellowLight, border: "1px solid " + B.yellow, borderRadius: 8, padding: "10px 13px", marginBottom: 12, fontSize: 12, color: "#6b5200", lineHeight: 1.55 }}>
-          This is the first {MAX_ROWS} participants by name. Use the search box to find anyone past that.
+      {listErr ? (
+        <div role="alert" style={{ background: B.redLight, border: "1px solid " + B.red, borderRadius: 8, padding: "10px 13px", marginBottom: 12, fontSize: 12.5, color: "#8b0a1c", lineHeight: 1.55 }}>
+          {listErr}{" "}
+          <button onClick={() => fetchPage(0)} style={{ background: "none", border: "none", padding: 0, color: "#8b0a1c", textDecoration: "underline", cursor: "pointer", fontSize: 12.5 }}>Try again</button>
         </div>
       ) : null}
 
-      {matches.length === 0 ? (
+      {!listBusy && !listErr && (needle || stageFilter) ? (
+        <p style={{ margin: "0 0 10px", fontSize: 12, color: B.muted }}>
+          {total === 1 ? "1 person matches." : total + " people match."}
+        </p>
+      ) : null}
+
+      {listBusy ? (
+        <Card style={{ textAlign: "center", padding: 30, color: B.muted, fontSize: 13 }}>
+          {needle ? "Searching…" : "Loading the list…"}
+        </Card>
+      ) : rows.length === 0 ? (
         <Card style={{ textAlign: "center", padding: 30, color: B.muted, fontSize: 13, lineHeight: 1.6 }}>
-          {people.length === 0
-            ? participantsEmptyCopy(profile)
-            : "Nobody matches that."}
+          {listErr
+            ? "The list could not be loaded."
+            : needle || stageFilter
+              ? "Nobody matches that."
+              : participantsEmptyCopy(profile)}
         </Card>
       ) : (
         <>
         <Card style={{ padding: 0, overflow: "hidden" }}>
-          {paged.visible.map((p, i) => (
+          {rows.map((p, i) => (
             <button
               key={p.id}
               onClick={() => setOpenId(p.id)}
               style={{
                 display: "block", width: "100%", textAlign: "left", background: B.white,
-                border: "none", borderBottom: i === paged.visible.length - 1 ? "none" : "1px solid " + B.offWhite,
+                border: "none", borderBottom: i === rows.length - 1 ? "none" : "1px solid " + B.offWhite,
                 padding: "12px 16px", cursor: "pointer", fontFamily: "'Open Sans',sans-serif",
               }}
             >

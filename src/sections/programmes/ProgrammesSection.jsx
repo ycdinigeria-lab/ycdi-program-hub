@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../lib/supabase.js";
+import { fetchAllRows } from "../../lib/fetchAll.js";
 import { Card } from "../../components/ui.jsx";
 import NCDashboard from "./NCDashboard.jsx";
 import CoordDashboard from "./CoordDashboard.jsx";
@@ -18,12 +19,17 @@ export default function ProgrammesSection({ profile, chapters, showToast, openPr
   const [loading, setLoading] = useState(true);
 
   const loadPrograms = useCallback(async () => {
-    let q = supabase.from("programs").select("*, chapters(name), reports(*)").order("created_at", { ascending: false });
+    let chapterId = null;
     if (profile.role !== "NC" && profile.chapter_name) {
       const { data: ch } = await supabase.from("chapters").select("id").eq("name", profile.chapter_name).single();
-      if (ch) q = q.eq("chapter_id", ch.id);
+      if (ch) chapterId = ch.id;
     }
-    const { data } = await q;
+    // BATCH36-MARKER fetch-all-use: every programme, read in pages.
+    const { data } = await fetchAllRows(() => {
+      let q = supabase.from("programs").select("*, chapters(name), reports(*)").order("created_at", { ascending: false }).order("id");
+      if (chapterId) q = q.eq("chapter_id", chapterId);
+      return q;
+    });
     if (data) {
       setPrograms(data.map((p) => ({
         ...p,

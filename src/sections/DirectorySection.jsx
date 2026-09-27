@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase.js";
+import { fetchAllRows } from "../lib/fetchAll.js";
 import { B } from "../theme.js";
 import { usePaged } from "../lib/paging.js";
 import { ShowMore } from "../components/ShowMore.jsx";
@@ -198,7 +199,8 @@ export default function DirectorySection({ profile, chapters, showToast }) {
   const [removing, setRemoving] = useState(null);
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from("directory_members").select("*, chapters(name)").order("full_name");
+  // BATCH36-MARKER fetch-all-use: read in pages so the list stays complete past 1,000 rows.
+    const { data } = await fetchAllRows(() => supabase.from("directory_members").select("*, chapters(name)").order("full_name").order("id"));
     // Phone numbers and email addresses live in their own table with
     // their own rules, and this function applies them: your own chapter,
     // plus everything if you are the National Coordinator or an admin.

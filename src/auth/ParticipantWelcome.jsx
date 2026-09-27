@@ -28,6 +28,9 @@ function niceTime(d) {
     : dt.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
+// How many of the most recent messages the thread shows.
+const DM_SHOWN = 200;
+
 export default function ParticipantWelcome({ onSignOut }) {
   const [summary, setSummary] = useState(null);
   const [mentorName, setMentorName] = useState("");
@@ -42,13 +45,19 @@ export default function ParticipantWelcome({ onSignOut }) {
     const [{ data: s }, { data: m }, { data: msgs }] = await Promise.all([
       supabase.rpc("participant_self_summary"),
       supabase.rpc("participant_mentor_name"),
+      // BATCH36-MARKER dm-latest
+      // The newest messages only, fetched newest-first and turned back
+      // round for reading. This runs every thirty seconds, so it must not
+      // grow with the whole history of the conversation.
       supabase.from("participant_dm_messages")
         .select("id, sender, body, created_at")
-        .order("created_at", { ascending: true }),
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(0, DM_SHOWN - 1),
     ]);
     setSummary(s && s[0] ? s[0] : null);
     setMentorName(m || "");
-    setMessages(msgs || []);
+    setMessages((msgs || []).slice().reverse());
     setLoading(false);
   }, []);
 

@@ -12,13 +12,16 @@ export function ShowMore({ paged, noun }) {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap", padding: "14px 4px 2px" }}>
       <button
         onClick={paged.showMore}
-        style={{ background: B.white, border: `1px solid ${B.blue}`, color: B.blue, borderRadius: 20, padding: "8px 18px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "'Montserrat',sans-serif" }}
+        disabled={!!paged.busy}
+        style={{ background: B.white, border: `1px solid ${B.blue}`, color: B.blue, borderRadius: 20, padding: "8px 18px", fontSize: 12.5, fontWeight: 700, cursor: paged.busy ? "wait" : "pointer", opacity: paged.busy ? 0.6 : 1, fontFamily: "'Montserrat',sans-serif" }}
       >
-        Show {paged.add} {word}
+        {paged.busy ? "Loading…" : <>Show {paged.add} {word}</>}
       </button>
       <span style={{ fontSize: 11.5, color: B.muted }}>
         {paged.total - paged.remaining} of {paged.total} shown
-        {paged.remaining > paged.add ? (
+        {/* BATCH36-MARKER showmore-server: a list fetched page by page
+            from the server has no showAll, because "all" can be 30,000. */}
+        {paged.remaining > paged.add && paged.showAll ? (
           <>
             {" · "}
             <button
