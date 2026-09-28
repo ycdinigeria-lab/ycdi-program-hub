@@ -309,7 +309,7 @@ export default function App() {
     ]) },
     { label: "People", items: clean([
       moreItem("participants"), moreItem("volunteers"), moreItem("applications"),
-      moreItem("finance"), moreItem("grants"), moreItem("donations"), moreItem("annualbudget"),
+      moreItem("finance"), moreItem("stipends"), moreItem("grants"), moreItem("donations"), moreItem("annualbudget"),
       coreItem("directory", "Directory", CORE_ICONS.directory),
     ]) },
     { label: "Spiritual life", items: clean([

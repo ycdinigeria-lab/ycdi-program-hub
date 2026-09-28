@@ -55,7 +55,7 @@ export function BudgetVsActual({ va }) {
       {line("Income", inc, B.green)}
       {line("Expenditure", exp, B.blue)}
       <p style={{ margin: "4px 0 0", fontSize: 12, color: B.muted, lineHeight: 1.6 }}>
-        Income is donations received and grants running this year. Expenditure is expense claims approved and paid this year.
+        Income is donations received and grants running this year. Expenditure is expense claims approved and paid this year, and stipends paid for months in this year.
       </p>
     </Card>
   );
@@ -239,7 +239,7 @@ export default function AnnualBudgetSection({ profile, chapters, showToast }) {
       <Card style={{ background: B.blueLight, borderColor: B.blue + "30", marginBottom: 16 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: B.blueDark || B.blue, fontFamily: "'Montserrat',sans-serif", marginBottom: 4 }}>Annual budget</div>
         <p style={{ margin: 0, fontSize: 12, color: B.muted, lineHeight: 1.7 }}>
-          The plan for a financial year, and the year measured against it. The Financial Secretary prepares it and the Board approves it before the year starts. The actual figures come from donations, grants and expense claims already in the Hub.
+          The plan for a financial year, and the year measured against it. The Financial Secretary prepares it and the Board approves it before the year starts. The actual figures come from donations, grants, expense claims and stipends already in the Hub.
         </p>
       </Card>
 

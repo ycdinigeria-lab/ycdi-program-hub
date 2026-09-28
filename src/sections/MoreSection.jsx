@@ -37,6 +37,8 @@ const GrantsSection = lazy(() => import("./GrantsSection.jsx"));
 const DonationsSection = lazy(() => import("./DonationsSection.jsx"));
 // BATCH35-MARKER more-annualbudget
 const AnnualBudgetSection = lazy(() => import("./AnnualBudgetSection.jsx"));
+// BATCH39-MARKER more-stipends
+const StipendsSection = lazy(() => import("./StipendsSection.jsx"));
 // BATCH7A-MARKER more-applications
 const ApplicationsSection = lazy(() => import("./ApplicationsSection.jsx"));
 // BATCH7B-MARKER more-renewals
@@ -269,6 +271,24 @@ export const MORE_FEATURES = [
     portfolio: ["FIN", "TREAS", "DNC"],
     adminExempt: true,
     render: (props) => <AnnualBudgetSection {...props} />,
+  },
+  {
+    // BATCH39-MARKER more-stipends
+    id: "stipends",
+    category: "people",
+    title: "Stipends",
+    short: "Monthly stipends for volunteer leaders",
+    icon: ICONS.ledger,
+    accent: B.blue,
+    // What each person is paid is personal, so this is the finance
+    // readers only: the NC, the Financial Secretary and the Treasurer. A
+    // person on the list sees their own stipend inside Finance instead.
+    // No Deputy, no Regional Coordinator, no plain admin, here or in the
+    // database.
+    roles: ["NC"],
+    portfolio: ["FIN", "TREAS"],
+    adminExempt: true,
+    render: (props) => <StipendsSection {...props} />,
   },
   {
     id: "applications",

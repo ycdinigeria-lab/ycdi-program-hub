@@ -10,6 +10,8 @@ import {
   formatNaira, parseNairaToKobo, koboToInput, todayLagos, dueInfo, actionsFor, canDecide,
   isOfficer, canReadAll, isChapterReader, checkReceiptFile, receiptPath, totals,
 } from "../lib/finance.js";
+// BATCH39-MARKER finance-my-stipend
+import MyStipend from "./MyStipend.jsx";
 
 // BATCH32-MARKER finance-screen
 //
@@ -727,6 +729,7 @@ export default function FinanceSection({ profile, chapters, showToast }) {
 
       {tab === "mine" ? (
         <div>
+          <MyStipend profile={profile} />
           {!composing ? (
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
               <button type="button" onClick={() => setComposing(true)} style={btnP}>Make a claim</button>
