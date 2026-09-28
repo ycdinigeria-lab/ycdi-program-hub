@@ -1,14 +1,24 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase.js";
-import { B, btnP, btnR, btnG, ta } from "../../theme.js";
+import { B, btnP, btnR, btnG, ta, inp } from "../../theme.js";
 import { Card, SHead, Badge } from "../../components/ui.jsx";
-import { THREE_TESTS } from "../../data/programmes.js";
+import { THREE_TESTS, PRIORITIES, NEEDS_QUESTIONS } from "../../data/programmes.js";
+import { approvalLevelInfo, missionTestPasses } from "../../lib/programmes.js";
 import ReportSummary from "./ReportSummary.jsx";
 import { downloadReportText } from "./reportExport.js";
 
+// BATCH37-MARKER concept-note-v2
+// Approving now depends on the programme's approval level (section 1.15):
+// Level 3 approves exactly as before; Level 4 needs the National
+// Coordinator to confirm Board Treasurer concurrence first; Level 5 needs
+// the Board's approval date and minute reference recorded first. Godfrey
+// chose the simpler route over having the Treasurer countersign in the
+// app themselves: the NC ticks the confirmation, same as they would tick
+// it off on a paper approval sheet.
 export default function ProgramDetail({ program, profile, onBack, onApprove, onReturn, onLogReport, onEdit }) {
   const [returning, setReturning] = useState(false);
   const [comment, setComment] = useState("");
+  const [signoff, setSignoff] = useState(null); // { level, treasurer_concurrence, treasurer_name, board_minute_ref, board_approval_date }
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState(program.report || null);
   const [loadingReport, setLoadingReport] = useState(true);
@@ -23,10 +33,26 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
     return () => { active = false; };
   }, [program.id]);
 
+  const level = approvalLevelInfo(program.budget);
+  const today = new Date().toISOString().slice(0, 10);
+
   function testPasses(test) {
-    if (test.name === "Mission test") return (program.objectives || "").length > 20;
+    if (test.name === "Mission test") return missionTestPasses(program);
     if (test.name === "Quality test") return !!program.facilitators;
     return !!program.safeguarding_lead;
+  }
+
+  function startApproving() {
+    if (level.level === 3) { onApprove(program.id); return; }
+    if (level.level === 4) { setSignoff({ treasurer_concurrence: false, treasurer_name: "" }); return; }
+    setSignoff({ board_minute_ref: "", board_approval_date: today });
+  }
+
+  async function confirmApprove() {
+    setBusy(true);
+    const ok = await onApprove(program.id, signoff);
+    setBusy(false);
+    if (ok !== false) setSignoff(null);
   }
 
   async function submitReturn() {
@@ -49,6 +75,19 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
   const canEdit = program.status === "Returned"
     && (profile.is_admin || (profile.role === "RC" && profile.chapter_name === program.chapter_name));
 
+  const detailRows = [
+    ["School / venue", program.school],
+    ["Target students", program.students],
+    ["Age range", program.age_range],
+    ["Geographic scope", program.geographic_scope],
+    ["Delivery format", program.delivery_format],
+    ["Budget", `NGN ${(program.budget || 0).toLocaleString()}`],
+    program.spent > 0 ? ["Spent", `NGN ${program.spent.toLocaleString()}`] : null,
+    ["Submitted", program.created_at ? new Date(program.created_at).toLocaleDateString() : ""],
+    ["Safeguarding lead", program.safeguarding_lead],
+    ["Facilitators", program.facilitators],
+  ].filter((r) => r && r[1]);
+
   return (
     <div style={{ fontFamily: "'Open Sans',sans-serif" }}>
       <button onClick={onBack} style={{ ...btnG, marginBottom: 18 }}>Back to Programs</button>
@@ -61,7 +100,7 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           {profile.is_admin && program.status === "Pending" ? (
             <>
-              <button onClick={() => onApprove(program.id)} style={btnP}>Approve</button>
+              <button onClick={startApproving} style={btnP}>Approve</button>
               <button onClick={() => setReturning(true)} style={btnR}>Return with Comment</button>
             </>
           ) : null}
@@ -84,6 +123,18 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
         </div>
       </div>
 
+      <Card style={{ background: B.blueLight, marginBottom: 16 }}>
+        <div style={{ fontSize: 12, color: "#065f87", lineHeight: 1.7 }}>
+          <strong>Approval level {level.level}</strong> (per section 1.15) — {level.approver}. {level.timeframe}.
+          {level.level === 4 ? (
+            <span> {program.treasurer_concurrence ? ` Treasurer concurrence confirmed${program.treasurer_name ? ` by ${program.treasurer_name}` : ""}${program.treasurer_concurrence_date ? ` on ${program.treasurer_concurrence_date}` : ""}.` : " Awaiting Treasurer concurrence."}</span>
+          ) : null}
+          {level.level === 5 ? (
+            <span> {program.board_minute_ref ? ` Board approval: minute ${program.board_minute_ref}${program.board_approval_date ? ` (${program.board_approval_date})` : ""}.` : " Awaiting Board approval date and minute reference."}</span>
+          ) : null}
+        </div>
+      </Card>
+
       {program.status === "Returned" && program.nc_comment ? (
         <Card style={{ background: B.redLight, borderColor: `${B.red}50`, marginBottom: 16 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: B.red, fontFamily: "'Montserrat',sans-serif", marginBottom: 8, textTransform: "uppercase" }}>Returned by National Coordinator</div>
@@ -103,15 +154,7 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
       <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 14, marginBottom: 14 }}>
         <Card>
           <SHead>Program details</SHead>
-          {[
-            ["School / venue", program.school],
-            ["Target students", program.students],
-            ["Budget", `NGN ${(program.budget || 0).toLocaleString()}`],
-            program.spent > 0 ? ["Spent", `NGN ${program.spent.toLocaleString()}`] : null,
-            ["Submitted", program.created_at ? new Date(program.created_at).toLocaleDateString() : ""],
-            ["Safeguarding lead", program.safeguarding_lead],
-            ["Facilitators", program.facilitators],
-          ].filter(Boolean).map(([k, v]) => (
+          {detailRows.map(([k, v]) => (
             <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "5px 0", borderBottom: `1px solid ${B.offWhite}` }}>
               <span style={{ color: B.muted }}>{k}</span>
               <span style={{ fontWeight: 600, textAlign: "right", maxWidth: "58%", wordBreak: "break-word" }}>{v}</span>
@@ -138,14 +181,113 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
           <div style={{ marginTop: 12 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: B.muted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Objectives</div>
             <p style={{ margin: 0, fontSize: 12, lineHeight: 1.7 }}>{program.objectives}</p>
+            {program.me_indicators ? (
+              <>
+                <div style={{ fontSize: 11, fontWeight: 700, color: B.muted, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 10, marginBottom: 6 }}>M&E indicators</div>
+                <p style={{ margin: 0, fontSize: 12, lineHeight: 1.7 }}>{program.me_indicators}</p>
+              </>
+            ) : null}
           </div>
         </Card>
       </div>
+
+      {program.needs_evidence || program.align_reach ? (
+        <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 14, marginBottom: 14 }}>
+          {program.needs_evidence ? (
+            <Card>
+              <SHead>Needs identification</SHead>
+              {NEEDS_QUESTIONS.map((q) => program[q.key] ? (
+                <div key={q.key} style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: B.muted }}>{q.label}</div>
+                  <p style={{ margin: "3px 0 0", fontSize: 12, lineHeight: 1.6 }}>{program[q.key]}</p>
+                </div>
+              ) : null)}
+            </Card>
+          ) : null}
+          {program.align_reach ? (
+            <Card>
+              <SHead>Strategic priority alignment</SHead>
+              {PRIORITIES.map((p) => program[p.key] ? (
+                <div key={p.key} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "5px 0", borderBottom: `1px solid ${B.offWhite}` }}>
+                  <span style={{ color: B.muted }}>{p.label}</span>
+                  <span style={{ fontWeight: 700, color: program[p.key] === "Strong" ? B.green : program[p.key] === "None" ? B.red : "#7a5c00" }}>{program[p.key]}</span>
+                </div>
+              ) : null)}
+            </Card>
+          ) : null}
+        </div>
+      ) : null}
+
+      {program.format_reasoning || program.activities_schedule || program.cost_lines || program.digital_safeguarding || program.permission_requirements ? (
+        <Card style={{ marginBottom: 14 }}>
+          <SHead>Delivery, safeguarding and permissions</SHead>
+          {[
+            ["Format reasoning", program.format_reasoning],
+            ["Activities and schedule", program.activities_schedule],
+            ["Key cost lines", program.cost_lines],
+            ["Digital safeguarding", program.digital_safeguarding],
+            ["Permission requirements", program.permission_requirements],
+          ].filter(([, v]) => v).map(([k, v]) => (
+            <div key={k} style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: B.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>{k}</div>
+              <p style={{ margin: "3px 0 0", fontSize: 12, lineHeight: 1.6 }}>{v}</p>
+            </div>
+          ))}
+        </Card>
+      ) : null}
 
       {loadingReport ? (
         <Card style={{ textAlign: "center", padding: 24, color: B.muted, fontSize: 13 }}>Loading report...</Card>
       ) : hasReport ? (
         <ReportSummary r={report} />
+      ) : null}
+
+      {signoff ? (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: B.white, borderRadius: 14, width: "100%", maxWidth: 500 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px", borderBottom: `1px solid ${B.border}` }}>
+              <span style={{ fontSize: 15, fontWeight: 700, fontFamily: "'Montserrat',sans-serif", color: B.blue }}>
+                {level.level === 4 ? "Confirm Treasurer concurrence" : "Record Board approval"}
+              </span>
+              <button onClick={() => setSignoff(null)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: B.muted }}>×</button>
+            </div>
+            <div style={{ padding: "20px 24px" }}>
+              {level.level === 4 ? (
+                <>
+                  <p style={{ fontSize: 12, color: B.muted, lineHeight: 1.6, marginTop: 0 }}>
+                    This is a Level 4 programme (N500,001–N2,000,000). Section 1.15 requires the National Coordinator and Board Treasurer to approve jointly, in writing. Confirm that has happened before approving here.
+                  </p>
+                  <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, marginBottom: 12 }}>
+                    <input type="checkbox" checked={signoff.treasurer_concurrence} onChange={(e) => setSignoff((s) => ({ ...s, treasurer_concurrence: e.target.checked }))} style={{ marginTop: 3 }} />
+                    Treasurer concurrence received
+                  </label>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: B.muted, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.06em" }}>Treasurer name</label>
+                  <input style={inp} value={signoff.treasurer_name} onChange={(e) => setSignoff((s) => ({ ...s, treasurer_name: e.target.value }))} placeholder="Full name of the Board Treasurer" />
+                </>
+              ) : (
+                <>
+                  <p style={{ fontSize: 12, color: B.muted, lineHeight: 1.6, marginTop: 0 }}>
+                    This is a Level 5 programme (above N2,000,000, or a new programme line, chapter launch, or digital platform commitment). Section 1.15 requires full Board approval. Record the date and minute reference before approving here.
+                  </p>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: B.muted, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.06em" }}>Board minute reference</label>
+                  <input style={{ ...inp, marginBottom: 12 }} value={signoff.board_minute_ref} onChange={(e) => setSignoff((s) => ({ ...s, board_minute_ref: e.target.value }))} placeholder="e.g. NEC/2026/09" />
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: B.muted, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.06em" }}>Board approval date</label>
+                  <input type="date" style={inp} value={signoff.board_approval_date} onChange={(e) => setSignoff((s) => ({ ...s, board_approval_date: e.target.value }))} />
+                </>
+              )}
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
+                <button style={btnG} onClick={() => setSignoff(null)}>Cancel</button>
+                <button
+                  style={{ ...btnP, opacity: busy || (level.level === 4 ? !signoff.treasurer_concurrence : !(signoff.board_minute_ref && signoff.board_approval_date)) ? 0.4 : 1 }}
+                  disabled={busy || (level.level === 4 ? !signoff.treasurer_concurrence : !(signoff.board_minute_ref && signoff.board_approval_date))}
+                  onClick={confirmApprove}
+                >
+                  {busy ? "Approving..." : "Approve"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {returning ? (

@@ -63,22 +63,31 @@ export default function ProgrammesSection({ profile, chapters, showToast, openPr
     setSelected(merged);
   }
 
-  async function approveProgram(id) {
-    // Goes through a function on the database side rather than a direct
-    // table update, so the "only an admin can do this" check lives in
-    // one place instead of depending on the programs table's own rules.
-    const { error } = await supabase.rpc("approve_program", { program_id: id });
-    if (error) { showToast("Error approving program: " + error.message, "error"); return; }
-    setPrograms((ps) => ps.map((p) => (p.id === id ? { ...p, status: "Approved", nc_comment: "" } : p)));
-    setSelected((s) => (s?.id === id ? { ...s, status: "Approved", nc_comment: "" } : s));
+  // BATCH37-MARKER concept-note-v2: approve_program now takes the Level
+  // 4/5 sign-off. `opts` is only populated by ProgramDetail's approval
+  // dialog when the level requires it; a Level 3 programme is approved
+  // with no opts at all, same call shape as before.
+  async function approveProgram(id, opts) {
+    const { error } = await supabase.rpc("approve_program", {
+      program_id: id,
+      p_treasurer_concurrence: opts?.treasurer_concurrence ?? null,
+      p_treasurer_name: opts?.treasurer_name ?? null,
+      p_board_minute_ref: opts?.board_minute_ref ?? null,
+      p_board_approval_date: opts?.board_approval_date ?? null,
+    });
+    if (error) { showToast("Error approving program: " + error.message, "error"); return false; }
+    setPrograms((ps) => ps.map((p) => (p.id === id ? { ...p, status: "Approved", nc_comment: "", ...opts } : p)));
+    setSelected((s) => (s?.id === id ? { ...s, status: "Approved", nc_comment: "", ...opts } : s));
     showToast("Programme approved. The coordinator has been notified.");
+    return true;
   }
 
   async function returnProgram(id, comment) {
     const { error } = await supabase.rpc("return_program", { program_id: id, note: comment });
     if (error) { showToast("Error returning program: " + error.message, "error"); return; }
-    setPrograms((ps) => ps.map((p) => (p.id === id ? { ...p, status: "Returned", nc_comment: comment } : p)));
-    setSelected((s) => (s?.id === id ? { ...s, status: "Returned", nc_comment: comment } : s));
+    const cleared = { treasurer_concurrence: false, treasurer_name: null, treasurer_concurrence_date: null, board_minute_ref: null, board_approval_date: null };
+    setPrograms((ps) => ps.map((p) => (p.id === id ? { ...p, status: "Returned", nc_comment: comment, ...cleared } : p)));
+    setSelected((s) => (s?.id === id ? { ...s, status: "Returned", nc_comment: comment, ...cleared } : s));
     showToast("Program returned with your comment.", "warning");
   }
 
@@ -87,6 +96,15 @@ export default function ProgrammesSection({ profile, chapters, showToast, openPr
       title: form.title, chapter_id: form.chapter_id, type: form.type, date: form.date,
       students: form.students, school: form.school, objectives: form.objectives,
       budget: form.budget, safeguarding_lead: form.safeguarding_lead, facilitators: form.facilitators,
+      age_range: form.age_range, geographic_scope: form.geographic_scope,
+      delivery_format: form.delivery_format, format_reasoning: form.format_reasoning,
+      me_indicators: form.me_indicators, activities_schedule: form.activities_schedule,
+      cost_lines: form.cost_lines, permission_requirements: form.permission_requirements,
+      digital_safeguarding: form.digital_safeguarding,
+      needs_evidence: form.needs_evidence, needs_gap: form.needs_gap,
+      needs_beneficiary_voice: form.needs_beneficiary_voice, needs_alternative: form.needs_alternative,
+      align_reach: form.align_reach, align_roots: form.align_roots, align_resources: form.align_resources,
+      align_raise: form.align_raise, align_reputation: form.align_reputation,
       status: "Pending", submitted_by: profile.id,
     });
     if (error) { showToast("Error submitting program: " + error.message, "error"); return; }
@@ -108,6 +126,15 @@ export default function ProgrammesSection({ profile, chapters, showToast, openPr
       title: form.title, chapter_id: form.chapter_id, type: form.type, date: form.date,
       students: form.students, school: form.school, objectives: form.objectives,
       budget: form.budget, safeguarding_lead: form.safeguarding_lead, facilitators: form.facilitators,
+      age_range: form.age_range, geographic_scope: form.geographic_scope,
+      delivery_format: form.delivery_format, format_reasoning: form.format_reasoning,
+      me_indicators: form.me_indicators, activities_schedule: form.activities_schedule,
+      cost_lines: form.cost_lines, permission_requirements: form.permission_requirements,
+      digital_safeguarding: form.digital_safeguarding,
+      needs_evidence: form.needs_evidence, needs_gap: form.needs_gap,
+      needs_beneficiary_voice: form.needs_beneficiary_voice, needs_alternative: form.needs_alternative,
+      align_reach: form.align_reach, align_roots: form.align_roots, align_resources: form.align_resources,
+      align_raise: form.align_raise, align_reputation: form.align_reputation,
       status: "Pending",
     }).eq("id", id);
     if (error) { showToast("Could not resubmit that: " + error.message, "error"); return; }
