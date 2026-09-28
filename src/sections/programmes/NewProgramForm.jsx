@@ -100,7 +100,17 @@ export default function NewProgramForm({ profile, chapters, onSubmit, onCancel, 
 
   return (
     <Card>
-      {editing && existing.nc_comment ? (
+      {/* BATCH38-MARKER tm-rc-review-chain: an RC-returned note shows the
+          RC's comment here instead of the NC's. */}
+      {editing && existing.status === "RC Returned" && existing.rc_comment ? (
+        <div style={{ background: B.redLight, border: `1px solid ${B.red}50`, borderRadius: 8, padding: "12px 15px", marginBottom: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: B.red, fontFamily: "'Montserrat',sans-serif", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            What your Regional Coordinator asked for
+          </div>
+          <p style={{ margin: 0, fontSize: 13, color: "#5a0a13", lineHeight: 1.6, fontStyle: "italic" }}>"{existing.rc_comment}"</p>
+        </div>
+      ) : null}
+      {editing && existing.status !== "RC Returned" && existing.nc_comment ? (
         <div style={{ background: B.redLight, border: `1px solid ${B.red}50`, borderRadius: 8, padding: "12px 15px", marginBottom: 20 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: B.red, fontFamily: "'Montserrat',sans-serif", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>
             What the National Coordinator asked for
@@ -244,8 +254,12 @@ export default function NewProgramForm({ profile, chapters, onSubmit, onCancel, 
           </div>
           {!valid ? <div style={{ background: B.yellowLight, borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#7a5c00", marginBottom: 12 }}>Please complete all required fields on the earlier steps before submitting.</div> : null}
           <div style={{ background: B.blueLight, borderRadius: 8, padding: "12px 14px", fontSize: 12, color: "#065f87", lineHeight: 1.6 }}>
-            {editing
+            {editing && existing.status === "RC Returned"
+              ? "Resubmitting sends this back to your Regional Coordinator for another look. Their earlier comment stays on the record."
+              : editing
               ? "Resubmitting sends this back to the National Coordinator for another look. Their earlier comment stays on the record."
+              : profile.role === "TM"
+              ? "Submitting sends this to your Regional Coordinator for review before it reaches the National Coordinator."
               : "Submitting sends this to the National Coordinator for review."}
           </div>
         </>
@@ -254,7 +268,13 @@ export default function NewProgramForm({ profile, chapters, onSubmit, onCancel, 
       <div style={{ display: "flex", gap: 10, justifyContent: "space-between", marginTop: 24 }}>
         <button style={btnG} onClick={step === 1 ? onCancel : () => setStep((s) => s - 1)}>{step === 1 ? "Cancel" : "Back"}</button>
         <button style={{ ...btnP, opacity: (step === 5 ? !valid : !canLeaveStep(step)) ? 0.4 : 1 }} disabled={step === 5 ? !valid : !canLeaveStep(step)} onClick={() => (step < 5 ? setStep((s) => s + 1) : submit())}>
-          {busy ? (editing ? "Resubmitting..." : "Submitting...") : step === 5 ? (editing ? "Resubmit for NC Approval" : "Submit for NC Approval") : "Next"}
+          {busy
+            ? (editing ? "Resubmitting..." : "Submitting...")
+            : step === 5
+            ? (editing
+                ? (existing.status === "RC Returned" ? "Resubmit to Regional Coordinator" : "Resubmit for NC Approval")
+                : (profile.role === "TM" ? "Submit to Regional Coordinator" : "Submit for NC Approval"))
+            : "Next"}
         </button>
       </div>
     </Card>

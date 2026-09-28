@@ -15,10 +15,15 @@ import { downloadReportText } from "./reportExport.js";
 // chose the simpler route over having the Treasurer countersign in the
 // app themselves: the NC ticks the confirmation, same as they would tick
 // it off on a paper approval sheet.
-export default function ProgramDetail({ program, profile, onBack, onApprove, onReturn, onLogReport, onEdit }) {
+export default function ProgramDetail({ program, profile, onBack, onApprove, onReturn, onDecline, onRcReturn, onLogReport, onEdit }) {
   const [returning, setReturning] = useState(false);
   const [comment, setComment] = useState("");
   const [signoff, setSignoff] = useState(null); // { level, treasurer_concurrence, treasurer_name, board_minute_ref, board_approval_date }
+  // BATCH38-MARKER tm-rc-review-chain
+  // rcAction is "decline" or "return" while that modal is open; rcComment
+  // is shared by both since only one is ever open at a time.
+  const [rcAction, setRcAction] = useState(null);
+  const [rcComment, setRcComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState(program.report || null);
   const [loadingReport, setLoadingReport] = useState(true);
@@ -63,6 +68,17 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
     setBusy(false);
   }
 
+  // BATCH38-MARKER tm-rc-review-chain
+  async function submitRcAction() {
+    if (!rcComment.trim()) return;
+    setBusy(true);
+    if (rcAction === "decline") await onDecline(program.id, rcComment);
+    else await onRcReturn(program.id, rcComment);
+    setRcAction(null);
+    setRcComment("");
+    setBusy(false);
+  }
+
   const hasReport = !!report;
   const canLogReport = (program.status === "Approved" || program.status === "Live") && (profile.is_admin || profile.chapter_name === program.chapter_name);
 
@@ -72,7 +88,18 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
   // Coordinator at that very moment, and changing it underneath them
   // would be worse than the problem this fixes.
   // BATCH4B-MARKER resubmit
-  const canEdit = program.status === "Returned"
+  const canEditReturned = program.status === "Returned"
+    && (profile.is_admin || (profile.role === "RC" && profile.chapter_name === program.chapter_name));
+  // BATCH38-MARKER tm-rc-review-chain
+  // A note the RC sent back can only be revised by the team member who
+  // submitted it (or an admin) — not by just anyone in the chapter.
+  const canEditRcReturned = program.status === "RC Returned"
+    && (profile.is_admin || program.submitted_by === profile.id);
+  const canEdit = canEditReturned || canEditRcReturned;
+  // The chapter's RC (or an admin) can act on a team member's note
+  // sitting in RC Review: decline it, return it with a comment, or edit
+  // it themselves and forward it on to the NC.
+  const canActAsRC = program.status === "RC Review"
     && (profile.is_admin || (profile.role === "RC" && profile.chapter_name === program.chapter_name));
 
   const detailRows = [
@@ -102,6 +129,13 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
             <>
               <button onClick={startApproving} style={btnP}>Approve</button>
               <button onClick={() => setReturning(true)} style={btnR}>Return with Comment</button>
+            </>
+          ) : null}
+          {canActAsRC ? (
+            <>
+              <button onClick={onEdit} style={btnP}>Revise & Forward to NC</button>
+              <button onClick={() => { setRcAction("return"); setRcComment(""); }} style={btnG}>Return with Comment</button>
+              <button onClick={() => { setRcAction("decline"); setRcComment(""); }} style={btnR}>Decline</button>
             </>
           ) : null}
           {canEdit && onEdit ? (
@@ -140,7 +174,7 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
           <div style={{ fontSize: 12, fontWeight: 700, color: B.red, fontFamily: "'Montserrat',sans-serif", marginBottom: 8, textTransform: "uppercase" }}>Returned by National Coordinator</div>
           <p style={{ margin: 0, fontSize: 13, color: "#5a0a13", lineHeight: 1.6, fontStyle: "italic" }}>"{program.nc_comment}"</p>
           <div style={{ marginTop: 10 }}>
-            {canEdit && onEdit ? (
+            {canEditReturned && onEdit ? (
               <button onClick={onEdit} style={btnR}>Revise and resubmit</button>
             ) : (
               <span style={{ fontSize: 12, color: B.red }}>
@@ -148,6 +182,33 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
               </span>
             )}
           </div>
+        </Card>
+      ) : null}
+
+      {/* BATCH38-MARKER tm-rc-review-chain */}
+      {program.status === "RC Returned" ? (
+        <Card style={{ background: B.redLight, borderColor: `${B.red}50`, marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: B.red, fontFamily: "'Montserrat',sans-serif", marginBottom: 8, textTransform: "uppercase" }}>Returned by your Regional Coordinator</div>
+          {program.rc_comment ? <p style={{ margin: 0, fontSize: 13, color: "#5a0a13", lineHeight: 1.6, fontStyle: "italic" }}>"{program.rc_comment}"</p> : null}
+          <div style={{ marginTop: 10 }}>
+            {canEditRcReturned && onEdit ? (
+              <button onClick={onEdit} style={btnR}>Revise and resubmit</button>
+            ) : (
+              <span style={{ fontSize: 12, color: B.red }}>
+                The team member who submitted this can revise and resubmit it.
+              </span>
+            )}
+          </div>
+        </Card>
+      ) : null}
+
+      {program.status === "Declined" ? (
+        <Card style={{ background: B.redLight, borderColor: `${B.red}50`, marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: B.black, fontFamily: "'Montserrat',sans-serif", marginBottom: 8, textTransform: "uppercase" }}>Declined by Regional Coordinator</div>
+          {program.rc_comment ? <p style={{ margin: 0, fontSize: 13, color: "#5a0a13", lineHeight: 1.6, fontStyle: "italic" }}>"{program.rc_comment}"</p> : null}
+          <p style={{ margin: "10px 0 0", fontSize: 12, color: B.black }}>
+            This concept note will not proceed. Start a new concept note to try again.
+          </p>
         </Card>
       ) : null}
 
@@ -303,6 +364,41 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
                 <button style={btnG} onClick={() => setReturning(false)}>Cancel</button>
                 <button style={{ ...btnR, opacity: comment.trim() && !busy ? 1 : 0.4 }} disabled={!comment.trim() || busy} onClick={submitReturn}>
                   {busy ? "Saving..." : "Return to Coordinator"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* BATCH38-MARKER tm-rc-review-chain: the RC's Decline / Return with
+          comment modal on a team member's submitted note. */}
+      {rcAction ? (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: B.white, borderRadius: 14, width: "100%", maxWidth: 500 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px", borderBottom: `1px solid ${B.border}` }}>
+              <span style={{ fontSize: 15, fontWeight: 700, fontFamily: "'Montserrat',sans-serif", color: B.red }}>
+                {rcAction === "decline" ? "Decline this concept note" : "Return with comment"}
+              </span>
+              <button onClick={() => setRcAction(null)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: B.muted }}>×</button>
+            </div>
+            <div style={{ padding: "20px 24px" }}>
+              <p style={{ fontSize: 12, color: B.muted, lineHeight: 1.6, marginTop: 0 }}>
+                {rcAction === "decline"
+                  ? "This note will not proceed. The team member will need to start a fresh concept note — give them a clear reason."
+                  : "Sends this back to the team member to revise and resubmit to you."}
+              </p>
+              <textarea
+                style={{ ...ta, minHeight: 110 }}
+                value={rcComment}
+                onChange={(e) => setRcComment(e.target.value)}
+                placeholder={rcAction === "decline" ? "Why this concept note is being declined…" : "What needs to change before this can go forward…"}
+                autoFocus
+              />
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
+                <button style={btnG} onClick={() => setRcAction(null)}>Cancel</button>
+                <button style={{ ...btnR, opacity: rcComment.trim() && !busy ? 1 : 0.4 }} disabled={!rcComment.trim() || busy} onClick={submitRcAction}>
+                  {busy ? "Saving..." : rcAction === "decline" ? "Decline" : "Return to Team Member"}
                 </button>
               </div>
             </div>

@@ -3,7 +3,15 @@ import { Card, SHead, StatCard, Badge } from "../../components/ui.jsx";
 
 export default function CoordDashboard({ programs, profile, onView, onNew, onReport }) {
   const mine = programs.filter((p) => p.chapter_name === profile.chapter_name);
-  const returned = mine.filter((p) => p.status === "Returned");
+  // BATCH38-MARKER tm-rc-review-chain
+  // Besides an NC-returned note, this panel now also surfaces: a note
+  // sitting in RC Review, for the chapter's RC to act on; and a note the
+  // RC sent back, for the team member who submitted it to revise.
+  const returned = mine.filter((p) =>
+    p.status === "Returned"
+    || (p.status === "RC Review" && (profile.role === "RC" || profile.is_admin))
+    || (p.status === "RC Returned" && p.submitted_by === profile.id)
+  );
 
   return (
     <div>
@@ -16,16 +24,22 @@ export default function CoordDashboard({ programs, profile, onView, onNew, onRep
       {returned.length > 0 ? (
         <Card style={{ background: B.redLight, borderColor: `${B.red}40`, marginBottom: 14 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: B.red, fontFamily: "'Montserrat',sans-serif", marginBottom: 8, textTransform: "uppercase" }}>Returned - action needed</div>
-          {returned.map((p) => (
-            <div key={p.id} onClick={() => onView(p)} style={{ cursor: "pointer", padding: "6px 0", borderBottom: `1px solid ${B.red}20` }}>
-              <div style={{ fontSize: 13, color: B.red, fontWeight: 600, textDecoration: "underline" }}>{p.title}</div>
-              {p.nc_comment ? (
-                <div style={{ fontSize: 11, color: "#8b0a1c", marginTop: 3, fontStyle: "italic" }}>
-                  NC: "{p.nc_comment.slice(0, 80)}{p.nc_comment.length > 80 ? "..." : ""}"
-                </div>
-              ) : null}
-            </div>
-          ))}
+          {returned.map((p) => {
+            const note = p.status === "Returned" ? p.nc_comment : p.status === "RC Returned" ? p.rc_comment : null;
+            const from = p.status === "Returned" ? "NC" : "RC";
+            return (
+              <div key={p.id} onClick={() => onView(p)} style={{ cursor: "pointer", padding: "6px 0", borderBottom: `1px solid ${B.red}20` }}>
+                <div style={{ fontSize: 13, color: B.red, fontWeight: 600, textDecoration: "underline" }}>{p.title}</div>
+                {note ? (
+                  <div style={{ fontSize: 11, color: "#8b0a1c", marginTop: 3, fontStyle: "italic" }}>
+                    {from}: "{note.slice(0, 80)}{note.length > 80 ? "..." : ""}"
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 11, color: "#8b0a1c", marginTop: 3, fontStyle: "italic" }}>Awaiting your review</div>
+                )}
+              </div>
+            );
+          })}
         </Card>
       ) : null}
 

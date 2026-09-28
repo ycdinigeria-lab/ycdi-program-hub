@@ -113,15 +113,24 @@ export default function ProgrammesSection({ profile, chapters, showToast, openPr
     showToast("Concept note submitted to the National Coordinator.");
   }
 
-  // Sends a returned programme back up for another look.
+  // Sends a programme on to whoever looks at it next. Which status it
+  // lands in depends on where it started (BATCH38-MARKER tm-rc-review-chain):
+  //   - Returned (by the NC)   -> Pending, straight back to the NC. Unchanged
+  //     from before this batch.
+  //   - RC Returned (by the RC) -> RC Review: the team member's revision goes
+  //     back to their RC, not straight to the NC.
+  //   - RC Review              -> Pending: the RC has edited a team member's
+  //     note themselves and is forwarding it on to the NC.
   //
-  // Two things are deliberately left out of this update. `nc_comment` is
-  // never sent, because the database refuses to let a coordinator change a
-  // review comment and would reject the whole save. Leaving it also keeps
-  // the comment on the record as history. `submitted_by` is left as it was
-  // so the notification still reaches whoever raised it originally.
+  // `nc_comment` and `rc_comment` are deliberately never sent here: the
+  // database refuses to let anyone but the reviewer who left them change a
+  // review comment, and leaving them out also keeps each comment on the
+  // record as history rather than clearing it on resubmission.
+  // `submitted_by` is left as it was so the notification still reaches
+  // whoever raised it originally.
   async function resubmitProgram(form) {
     const id = editProgram.id;
+    const nextStatus = editProgram.status === "RC Returned" ? "RC Review" : "Pending";
     const { error } = await supabase.from("programs").update({
       title: form.title, chapter_id: form.chapter_id, type: form.type, date: form.date,
       students: form.students, school: form.school, objectives: form.objectives,
@@ -135,13 +144,38 @@ export default function ProgrammesSection({ profile, chapters, showToast, openPr
       needs_beneficiary_voice: form.needs_beneficiary_voice, needs_alternative: form.needs_alternative,
       align_reach: form.align_reach, align_roots: form.align_roots, align_resources: form.align_resources,
       align_raise: form.align_raise, align_reputation: form.align_reputation,
-      status: "Pending",
+      status: nextStatus,
     }).eq("id", id);
-    if (error) { showToast("Could not resubmit that: " + error.message, "error"); return; }
+    if (error) { showToast("Could not save that: " + error.message, "error"); return; }
     await loadPrograms();
     setEditProgram(null);
     setSelected(null);
-    showToast("Resubmitted. The National Coordinator has been notified.");
+    showToast(
+      nextStatus === "RC Review"
+        ? "Resubmitted to your Regional Coordinator."
+        : "Resubmitted. The National Coordinator has been notified."
+    );
+  }
+
+  // BATCH38-MARKER tm-rc-review-chain
+  // The three moves a chapter's RC (or an admin) has on a team member's
+  // note sitting in RC Review. Forwarding reuses resubmitProgram above
+  // (RC Review -> Pending) once the RC has edited the note, so only
+  // Decline and Return-with-comment need their own calls here.
+  async function declineProgram(id, reason) {
+    const { error } = await supabase.from("programs").update({ status: "Declined", rc_comment: reason }).eq("id", id);
+    if (error) { showToast("Could not decline that: " + error.message, "error"); return; }
+    setPrograms((ps) => ps.map((p) => (p.id === id ? { ...p, status: "Declined", rc_comment: reason } : p)));
+    setSelected((s) => (s?.id === id ? { ...s, status: "Declined", rc_comment: reason } : s));
+    showToast("Concept note declined.", "warning");
+  }
+
+  async function rcReturnProgram(id, comment) {
+    const { error } = await supabase.from("programs").update({ status: "RC Returned", rc_comment: comment }).eq("id", id);
+    if (error) { showToast("Could not return that: " + error.message, "error"); return; }
+    setPrograms((ps) => ps.map((p) => (p.id === id ? { ...p, status: "RC Returned", rc_comment: comment } : p)));
+    setSelected((s) => (s?.id === id ? { ...s, status: "RC Returned", rc_comment: comment } : s));
+    showToast("Returned to the team member with your comment.", "warning");
   }
 
   function onReportSaved() {
@@ -170,6 +204,8 @@ export default function ProgrammesSection({ profile, chapters, showToast, openPr
           onBack={() => setSelected(null)}
           onApprove={approveProgram}
           onReturn={returnProgram}
+          onDecline={declineProgram}
+          onRcReturn={rcReturnProgram}
           onLogReport={setReportProgram}
           onEdit={() => setEditProgram(selected)}
         />

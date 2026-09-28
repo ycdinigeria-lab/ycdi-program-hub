@@ -51,4 +51,8 @@ export const STATUS_CFG = {
   Live: { bg: "#E8F5E9", text: "#1a6b2f", dot: "#2ecc71" },
   Complete: { bg: "#F1EEE9", text: "#6B6D72", dot: "#aaa" },
   Returned: { bg: "#FDEAED", text: "#8b0a1c", dot: B.red },
+  // BATCH38-MARKER tm-rc-review-chain
+  "RC Review": { bg: B.purpleLight, text: B.purple, dot: B.purple },
+  "RC Returned": { bg: "#FDEAED", text: "#8b0a1c", dot: B.red },
+  Declined: { bg: "#FDEAED", text: B.black, dot: "#5a0a13" },
 };
