@@ -102,13 +102,12 @@ describe("resubmitting a returned programme", () => {
   const noop = () => {};
   const text = (el) => renderToString(el).replace(/<!-- -->/g, "");
 
-  // These render a single frame each (renderToString, no click harness).
-  // The wizard is five steps as of Batch 37 (Needs Identification and
-  // Strategic Alignment come first); initialStep is a test-only prop that
-  // jumps straight to step 3, where title/venue/budget live, without
-  // simulating a click through the earlier steps.
+  // These render the first frame only. The wizard's third step, where the
+  // Resubmit button lives, needs a real click to reach and is not covered
+  // here. What is covered is that the form arrives carrying the existing
+  // programme rather than empty, which was the whole point.
   it("opens pre-filled with what was already there", () => {
-    const html = text(<NewProgramForm profile={profile} chapters={chapters} existing={returned} onSubmit={noop} onCancel={noop} initialStep={3} />);
+    const html = text(<NewProgramForm profile={profile} chapters={chapters} existing={returned} onSubmit={noop} onCancel={noop} />);
     expect(html).toContain("Term two fellowship week");
     expect(html).toContain("Eghosa Grammar School");
     expect(html).toContain("35000");
