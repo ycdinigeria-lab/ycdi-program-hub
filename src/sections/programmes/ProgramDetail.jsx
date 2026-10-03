@@ -1,16 +1,26 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase.js";
-import { B, btnP, btnR, btnG, ta } from "../../theme.js";
-import { Card, SHead, Badge } from "../../components/ui.jsx";
-import { THREE_TESTS } from "../../data/programmes.js";
+import { B, ta } from "../../theme.js";
+import { Badge, Button, Card, Field, Modal, PageHeader, SkeletonCard, SkeletonRegion } from "../../components/ui.jsx";
+import Icon from "../../components/Icon.jsx";
 import ReportSummary from "./ReportSummary.jsx";
 import { downloadReportText } from "./reportExport.js";
+import { FactsStrip, PeopleList, ReadinessChecklist } from "./parts.jsx";
+import { fullDate, programmePermissions, readinessChecks, splitNames } from "../../lib/programmeView.js";
 
+// BATCH41-MARKER programme-detail
+//
+// The programme page, rebuilt to answer three things in order: what is this
+// and where does it stand (title, status, the actions open to you), what are
+// the facts (date, students, budget, venue), and is it ready (objectives,
+// people, the three checks). Every rule about who may approve, return,
+// decline, edit or log a report is carried over unchanged from before; only
+// the layout, wording and look are new.
 export default function ProgramDetail({ program, profile, onBack, onApprove, onReturn, onDecline, onRcReturn, onLogReport, onEdit }) {
   const [returning, setReturning] = useState(false);
   const [comment, setComment] = useState("");
   // BATCH38-MARKER tm-rc-review-chain
-  // rcAction is "decline" or "return" while that modal is open; rcComment
+  // rcAction is "decline" or "return" while that dialog is open; rcComment
   // is shared by both since only one is ever open at a time.
   const [rcAction, setRcAction] = useState(null);
   const [rcComment, setRcComment] = useState("");
@@ -27,12 +37,6 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
     })();
     return () => { active = false; };
   }, [program.id]);
-
-  function testPasses(test) {
-    if (test.name === "Mission test") return (program.objectives || "").length > 20;
-    if (test.name === "Quality test") return !!program.facilitators;
-    return !!program.safeguarding_lead;
-  }
 
   async function submitReturn() {
     if (!comment.trim()) return;
@@ -54,79 +58,70 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
   }
 
   const hasReport = !!report;
-  const canLogReport = (program.status === "Approved" || program.status === "Live") && (profile.is_admin || profile.chapter_name === program.chapter_name);
-
-  // A returned programme told the coordinator to revise and resubmit and
-  // then gave them no way to do either. Editing is limited to Returned on
-  // purpose: a Pending one may be open in front of the National
-  // Coordinator at that very moment, and changing it underneath them
-  // would be worse than the problem this fixes.
   // BATCH4B-MARKER resubmit
-  const canEditReturned = program.status === "Returned"
-    && (profile.is_admin || (profile.role === "RC" && profile.chapter_name === program.chapter_name));
   // BATCH38-MARKER tm-rc-review-chain
-  // A note the RC sent back can only be revised by the team member who
-  // submitted it (or an admin), not by just anyone in the chapter.
-  const canEditRcReturned = program.status === "RC Returned"
-    && (profile.is_admin || program.submitted_by === profile.id);
-  const canEdit = canEditReturned || canEditRcReturned;
-  // The chapter's RC (or an admin) can act on a team member's note
-  // sitting in RC Review: decline it, return it with a comment, or edit
-  // it themselves and forward it on to the NC.
-  const canActAsRC = program.status === "RC Review"
-    && (profile.is_admin || (profile.role === "RC" && profile.chapter_name === program.chapter_name));
+  // Who may do what lives in lib/programmeView.js, where each rule is
+  // written out with its reason and tested on its own.
+  const { canApprove, canLogReport, canEditReturned, canEditRcReturned, canEdit, canActAsRC } = programmePermissions(program, profile);
+
+  const actions = (
+    <>
+      {canApprove ? (
+        <>
+          <Button onClick={() => onApprove(program.id)}>Approve programme</Button>
+          <Button variant="outline" onClick={() => setReturning(true)}>Request changes</Button>
+        </>
+      ) : null}
+      {canActAsRC ? (
+        <>
+          <Button onClick={onEdit}>Revise and forward to NC</Button>
+          <Button variant="outline" onClick={() => { setRcAction("return"); setRcComment(""); }}>Request changes</Button>
+          <Button variant="danger" onClick={() => { setRcAction("decline"); setRcComment(""); }}>Decline</Button>
+        </>
+      ) : null}
+      {canEdit && onEdit ? <Button onClick={onEdit}>Edit and resubmit</Button> : null}
+      {loadingReport ? <span className="hub-muted" style={{ fontSize: 13 }}>Checking report...</span> : null}
+      {!loadingReport && !hasReport && canLogReport ? (
+        <Button icon="clipboard" onClick={() => onLogReport(program)}>Log report</Button>
+      ) : null}
+      {!loadingReport && hasReport ? (
+        <>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: B.green, fontSize: 13, fontWeight: 700 }}>
+            <Icon name="circleCheck" size={18} />Report submitted
+          </span>
+          <Button variant="secondary" icon="download" onClick={() => downloadReportText(program, report)}>Download report</Button>
+        </>
+      ) : null}
+    </>
+  );
+
+  const subtitle = [program.chapter_name ? program.chapter_name + " Chapter" : "", program.type].filter(Boolean).join(" · ");
+  const objectives = String(program.objectives || "").split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
+  const checks = readinessChecks(program);
+  const leads = program.safeguarding_lead ? [String(program.safeguarding_lead).trim()] : [];
 
   return (
-    <div style={{ fontFamily: "'Open Sans',sans-serif" }}>
-      <button onClick={onBack} style={{ ...btnG, marginBottom: 18 }}>Back to Programs</button>
-
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: B.black, fontFamily: "'Montserrat',sans-serif" }}>{program.title}</h2>
-          <div style={{ fontSize: 12, color: B.muted, marginTop: 5 }}>{program.chapter_name} Chapter - {program.type} - {program.date}</div>
-        </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          {profile.is_admin && program.status === "Pending" ? (
-            <>
-              <button onClick={() => onApprove(program.id)} style={btnP}>Approve</button>
-              <button onClick={() => setReturning(true)} style={btnR}>Return with Comment</button>
-            </>
-          ) : null}
-          {canActAsRC ? (
-            <>
-              <button onClick={onEdit} style={btnP}>Revise & Forward to NC</button>
-              <button onClick={() => { setRcAction("return"); setRcComment(""); }} style={btnG}>Return with Comment</button>
-              <button onClick={() => { setRcAction("decline"); setRcComment(""); }} style={btnR}>Decline</button>
-            </>
-          ) : null}
-          {canEdit && onEdit ? (
-            <button onClick={onEdit} style={btnP}>Edit and resubmit</button>
-          ) : null}
-          {loadingReport ? <span style={{ fontSize: 12, color: B.muted }}>Checking report...</span> : null}
-          {!loadingReport && !hasReport && canLogReport ? (
-            <button onClick={() => onLogReport(program)} style={btnP}>Log Report</button>
-          ) : null}
-          {!loadingReport && hasReport ? (
-            <>
-              <span style={{ color: B.green, fontSize: 13, fontWeight: 600 }}>Report submitted</span>
-              <button onClick={() => downloadReportText(program, report)} style={{ background: B.green, color: B.white, border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Montserrat',sans-serif" }}>
-                Download report
-              </button>
-            </>
-          ) : null}
-          <Badge status={program.status} />
-        </div>
-      </div>
+    <div className="hub-fade-in" style={{ fontFamily: "'Open Sans',sans-serif" }}>
+      <PageHeader
+        back={{ label: "Back to programmes", onClick: onBack }}
+        title={program.title}
+        description={subtitle}
+        meta={<Badge status={program.status} />}
+        action={actions}
+      />
 
       {program.status === "Returned" && program.nc_comment ? (
-        <Card style={{ background: B.redLight, borderColor: `${B.red}50`, marginBottom: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: B.red, fontFamily: "'Montserrat',sans-serif", marginBottom: 8, textTransform: "uppercase" }}>Returned by National Coordinator</div>
-          <p style={{ margin: 0, fontSize: 13, color: "#5a0a13", lineHeight: 1.6, fontStyle: "italic" }}>"{program.nc_comment}"</p>
-          <div style={{ marginTop: 10 }}>
+        <Card variant="attention" style={{ marginBottom: 16 }}>
+          <div className="hub-attn-head">
+            <Icon name="alert" size={20} style={{ color: B.red }} />
+            <h3 className="hub-section-title">Returned by the National Coordinator</h3>
+          </div>
+          <p className="hub-quote">&ldquo;{program.nc_comment}&rdquo;</p>
+          <div style={{ marginTop: 12 }}>
             {canEditReturned && onEdit ? (
-              <button onClick={onEdit} style={btnR}>Revise and resubmit</button>
+              <Button onClick={onEdit}>Revise and resubmit</Button>
             ) : (
-              <span style={{ fontSize: 12, color: B.red }}>
+              <span style={{ fontSize: 13, color: "#5a0a13" }}>
                 Your Regional Coordinator or an administrator can revise and resubmit this.
               </span>
             )}
@@ -136,14 +131,17 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
 
       {/* BATCH38-MARKER tm-rc-review-chain */}
       {program.status === "RC Returned" ? (
-        <Card style={{ background: B.redLight, borderColor: `${B.red}50`, marginBottom: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: B.red, fontFamily: "'Montserrat',sans-serif", marginBottom: 8, textTransform: "uppercase" }}>Returned by your Regional Coordinator</div>
-          {program.rc_comment ? <p style={{ margin: 0, fontSize: 13, color: "#5a0a13", lineHeight: 1.6, fontStyle: "italic" }}>"{program.rc_comment}"</p> : null}
-          <div style={{ marginTop: 10 }}>
+        <Card variant="attention" style={{ marginBottom: 16 }}>
+          <div className="hub-attn-head">
+            <Icon name="alert" size={20} style={{ color: B.red }} />
+            <h3 className="hub-section-title">Returned by your Regional Coordinator</h3>
+          </div>
+          {program.rc_comment ? <p className="hub-quote">&ldquo;{program.rc_comment}&rdquo;</p> : null}
+          <div style={{ marginTop: 12 }}>
             {canEditRcReturned && onEdit ? (
-              <button onClick={onEdit} style={btnR}>Revise and resubmit</button>
+              <Button onClick={onEdit}>Revise and resubmit</Button>
             ) : (
-              <span style={{ fontSize: 12, color: B.red }}>
+              <span style={{ fontSize: 13, color: "#5a0a13" }}>
                 The team member who submitted this can revise and resubmit it.
               </span>
             )}
@@ -152,116 +150,122 @@ export default function ProgramDetail({ program, profile, onBack, onApprove, onR
       ) : null}
 
       {program.status === "Declined" ? (
-        <Card style={{ background: B.redLight, borderColor: `${B.red}50`, marginBottom: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: B.black, fontFamily: "'Montserrat',sans-serif", marginBottom: 8, textTransform: "uppercase" }}>Declined by Regional Coordinator</div>
-          {program.rc_comment ? <p style={{ margin: 0, fontSize: 13, color: "#5a0a13", lineHeight: 1.6, fontStyle: "italic" }}>"{program.rc_comment}"</p> : null}
-          <p style={{ margin: "10px 0 0", fontSize: 12, color: B.black }}>
+        <Card variant="attention" style={{ marginBottom: 16 }}>
+          <div className="hub-attn-head">
+            <Icon name="alert" size={20} style={{ color: B.red }} />
+            <h3 className="hub-section-title">Declined by the Regional Coordinator</h3>
+          </div>
+          {program.rc_comment ? <p className="hub-quote">&ldquo;{program.rc_comment}&rdquo;</p> : null}
+          <p style={{ margin: "10px 0 0", fontSize: 13, color: B.black }}>
             This concept note will not proceed. Start a new concept note to try again.
           </p>
         </Card>
       ) : null}
 
-      <div className="rcol1" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 14, marginBottom: 14 }}>
-        <Card>
-          <SHead>Program details</SHead>
-          {[
-            ["School / venue", program.school],
-            ["Target students", program.students],
-            ["Budget", `NGN ${(program.budget || 0).toLocaleString()}`],
-            program.spent > 0 ? ["Spent", `NGN ${program.spent.toLocaleString()}`] : null,
-            ["Submitted", program.created_at ? new Date(program.created_at).toLocaleDateString() : ""],
-            ["Safeguarding lead", program.safeguarding_lead],
-            ["Facilitators", program.facilitators],
-          ].filter(Boolean).map(([k, v]) => (
-            <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "5px 0", borderBottom: `1px solid ${B.offWhite}` }}>
-              <span style={{ color: B.muted }}>{k}</span>
-              <span style={{ fontWeight: 600, textAlign: "right", maxWidth: "58%", wordBreak: "break-word" }}>{v}</span>
-            </div>
-          ))}
-        </Card>
+      <FactsStrip
+        facts={[
+          { label: "Programme date", value: fullDate(program.date) },
+          { label: "Students", value: program.students === undefined || program.students === null || program.students === "" ? "" : Number(program.students).toLocaleString() },
+          { label: "Budget", value: `NGN ${(program.budget || 0).toLocaleString()}` },
+          program.spent > 0 ? { label: "Spent", value: `NGN ${program.spent.toLocaleString()}` } : null,
+          { label: "Venue", value: program.school },
+        ].filter(Boolean)}
+      />
 
-        <Card>
-          <SHead>YCDI three-program tests</SHead>
-          {THREE_TESTS.map((t) => {
-            const ok = testPasses(t);
-            return (
-              <div key={t.name} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 0", borderBottom: `1px solid ${B.offWhite}` }}>
-                <div style={{ width: 22, height: 22, borderRadius: "50%", background: ok ? `${t.color}20` : B.redLight, color: ok ? t.color : B.red, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, flexShrink: 0, fontWeight: 700 }}>
-                  {ok ? "OK" : "!"}
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: ok ? B.black : B.red, fontFamily: "'Montserrat',sans-serif" }}>{t.name}</div>
-                  <div style={{ fontSize: 11, color: B.muted, marginTop: 2 }}>{t.q}</div>
-                </div>
-              </div>
-            );
-          })}
-          <div style={{ marginTop: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: B.muted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Objectives</div>
-            <p style={{ margin: 0, fontSize: 12, lineHeight: 1.7 }}>{program.objectives}</p>
-          </div>
-        </Card>
+      <div className="hub-detail-grid">
+        <div className="hub-stack">
+          <Card variant="surface">
+            <h3 className="hub-section-title">Objectives</h3>
+            {objectives.length === 0 ? (
+              <p className="hub-prose hub-muted">No objectives written yet.</p>
+            ) : (
+              objectives.map((para, i) => <p className="hub-prose" style={{ whiteSpace: "pre-line" }} key={i}>{para}</p>)
+            )}
+          </Card>
+
+          <Card variant="surface">
+            <h3 className="hub-section-title">People</h3>
+            <p className="hub-eyebrow">Facilitators</p>
+            <PeopleList names={splitNames(program.facilitators)} emptyText="No facilitators named." />
+            <p className="hub-eyebrow" style={{ marginTop: 18 }}>Safeguarding lead</p>
+            <PeopleList names={leads} emptyText="No safeguarding lead assigned." />
+          </Card>
+        </div>
+
+        <div className="hub-stack">
+          <ReadinessChecklist checks={checks} />
+          {program.created_at ? (
+            <Card variant="surface">
+              <p className="hub-eyebrow">Submitted</p>
+              <p className="hub-prose" style={{ margin: 0 }}>{new Date(program.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</p>
+            </Card>
+          ) : null}
+        </div>
       </div>
 
       {loadingReport ? (
-        <Card style={{ textAlign: "center", padding: 24, color: B.muted, fontSize: 13 }}>Loading report...</Card>
+        <SkeletonRegion label="Loading report"><SkeletonCard /></SkeletonRegion>
       ) : hasReport ? (
         <ReportSummary r={report} />
       ) : null}
 
       {returning ? (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: B.white, borderRadius: 14, width: "100%", maxWidth: 500 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px", borderBottom: `1px solid ${B.border}` }}>
-              <span style={{ fontSize: 15, fontWeight: 700, fontFamily: "'Montserrat',sans-serif", color: B.red }}>Return with comment</span>
-              <button onClick={() => setReturning(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: B.muted }}>×</button>
-            </div>
-            <div style={{ padding: "20px 24px" }}>
-              <textarea style={{ ...ta, minHeight: 110 }} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Explain what needs to change before this can be approved…" autoFocus />
-              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
-                <button style={btnG} onClick={() => setReturning(false)}>Cancel</button>
-                <button style={{ ...btnR, opacity: comment.trim() && !busy ? 1 : 0.4 }} disabled={!comment.trim() || busy} onClick={submitReturn}>
-                  {busy ? "Saving..." : "Return to Coordinator"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Modal
+          title="Request changes"
+          busy={busy}
+          onClose={() => setReturning(false)}
+          footer={
+            <>
+              <Button variant="tertiary" disabled={busy} onClick={() => setReturning(false)}>Cancel</Button>
+              <Button iconRight="arrowRight" disabled={!comment.trim() || busy} onClick={submitReturn}>
+                {busy ? "Sending..." : "Send feedback"}
+              </Button>
+            </>
+          }
+        >
+          <p className="hub-prose hub-muted">Tell the chapter coordinator what needs to be changed before approval.</p>
+          <Field label="Feedback" required>
+            <textarea data-autofocus style={{ ...ta, minHeight: 120 }} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Please update..." />
+          </Field>
+        </Modal>
       ) : null}
 
-      {/* BATCH38-MARKER tm-rc-review-chain: the RC's Decline / Return with
-          comment modal on a team member's submitted note. */}
+      {/* BATCH38-MARKER tm-rc-review-chain: the RC's Decline / Request
+          changes dialog on a team member's submitted note. */}
       {rcAction ? (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: B.white, borderRadius: 14, width: "100%", maxWidth: 500 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px", borderBottom: `1px solid ${B.border}` }}>
-              <span style={{ fontSize: 15, fontWeight: 700, fontFamily: "'Montserrat',sans-serif", color: B.red }}>
-                {rcAction === "decline" ? "Decline this concept note" : "Return with comment"}
-              </span>
-              <button onClick={() => setRcAction(null)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: B.muted }}>×</button>
-            </div>
-            <div style={{ padding: "20px 24px" }}>
-              <p style={{ fontSize: 12, color: B.muted, lineHeight: 1.6, marginTop: 0 }}>
-                {rcAction === "decline"
-                  ? "This note will not proceed. The team member will need to start a fresh concept note, so give them a clear reason."
-                  : "Sends this back to the team member to revise and resubmit to you."}
-              </p>
-              <textarea
-                style={{ ...ta, minHeight: 110 }}
-                value={rcComment}
-                onChange={(e) => setRcComment(e.target.value)}
-                placeholder={rcAction === "decline" ? "Why this concept note is being declined…" : "What needs to change before this can go forward…"}
-                autoFocus
-              />
-              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
-                <button style={btnG} onClick={() => setRcAction(null)}>Cancel</button>
-                <button style={{ ...btnR, opacity: rcComment.trim() && !busy ? 1 : 0.4 }} disabled={!rcComment.trim() || busy} onClick={submitRcAction}>
-                  {busy ? "Saving..." : rcAction === "decline" ? "Decline" : "Return to Team Member"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Modal
+          title={rcAction === "decline" ? "Decline this concept note" : "Request changes"}
+          busy={busy}
+          onClose={() => setRcAction(null)}
+          footer={
+            <>
+              <Button variant="tertiary" disabled={busy} onClick={() => setRcAction(null)}>Cancel</Button>
+              <Button
+                variant={rcAction === "decline" ? "danger" : "primary"}
+                iconRight={rcAction === "decline" ? undefined : "arrowRight"}
+                disabled={!rcComment.trim() || busy}
+                onClick={submitRcAction}
+              >
+                {busy ? "Saving..." : rcAction === "decline" ? "Decline" : "Send feedback"}
+              </Button>
+            </>
+          }
+        >
+          <p className="hub-prose hub-muted">
+            {rcAction === "decline"
+              ? "This note will not proceed. The team member will need to start a fresh concept note, so give them a clear reason."
+              : "Sends this back to the team member to revise and resubmit to you."}
+          </p>
+          <Field label={rcAction === "decline" ? "Reason" : "Feedback"} required>
+            <textarea
+              data-autofocus
+              style={{ ...ta, minHeight: 120 }}
+              value={rcComment}
+              onChange={(e) => setRcComment(e.target.value)}
+              placeholder={rcAction === "decline" ? "Why this concept note is being declined..." : "What needs to change before this can go forward..."}
+            />
+          </Field>
+        </Modal>
       ) : null}
     </div>
   );

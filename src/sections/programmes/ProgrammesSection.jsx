@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../lib/supabase.js";
 import { fetchAllRows } from "../../lib/fetchAll.js";
-import { Card } from "../../components/ui.jsx";
+// BATCH41-MARKER programme-section
+import { ProgrammesSkeleton } from "./parts.jsx";
 import NCDashboard from "./NCDashboard.jsx";
 import CoordDashboard from "./CoordDashboard.jsx";
 import ProgramDetail from "./ProgramDetail.jsx";
@@ -79,7 +80,7 @@ export default function ProgrammesSection({ profile, chapters, showToast, openPr
     if (error) { showToast("Error returning program: " + error.message, "error"); return; }
     setPrograms((ps) => ps.map((p) => (p.id === id ? { ...p, status: "Returned", nc_comment: comment } : p)));
     setSelected((s) => (s?.id === id ? { ...s, status: "Returned", nc_comment: comment } : s));
-    showToast("Program returned with your comment.", "warning");
+    showToast("Feedback sent to the chapter coordinator.");
   }
 
   async function addProgram(form) {
@@ -148,7 +149,7 @@ export default function ProgrammesSection({ profile, chapters, showToast, openPr
     if (error) { showToast("Could not return that: " + error.message, "error"); return; }
     setPrograms((ps) => ps.map((p) => (p.id === id ? { ...p, status: "RC Returned", rc_comment: comment } : p)));
     setSelected((s) => (s?.id === id ? { ...s, status: "RC Returned", rc_comment: comment } : s));
-    showToast("Returned to the team member with your comment.", "warning");
+    showToast("Feedback sent to the team member.");
   }
 
   function onReportSaved() {
@@ -159,7 +160,7 @@ export default function ProgrammesSection({ profile, chapters, showToast, openPr
   }
 
   if (loading) {
-    return <Card style={{ textAlign: "center", padding: 30, color: "#5a5a5a", fontSize: 13 }}>Loading programmes…</Card>;
+    return <ProgrammesSkeleton />;
   }
 
   return (

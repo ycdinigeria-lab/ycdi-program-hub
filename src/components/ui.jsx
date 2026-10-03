@@ -1,4 +1,4 @@
-import { useId, cloneElement, isValidElement } from "react";
+import { useId, useEffect, useRef, cloneElement, isValidElement } from "react";
 import { B, STATUS_CFG } from "../theme.js";
 import { srOnly, liveRegionProps } from "../lib/a11y.js";
 import ycdiCrest from "../assets/ycdi-logo.png";
@@ -193,7 +193,7 @@ export function Button({ variant = "primary", size, block, icon, iconRight, type
 // A heading for the top of a screen: title, one line of context, and the
 // primary action on the right. `back` adds a quiet way out above it.
 // Defaults to h2 because the shell already prints an h1 for the section.
-export function PageHeader({ title, description, action, back, as }) {
+export function PageHeader({ title, description, action, back, as, meta }) {
   const Tag = as || "h2";
   return (
     <div>
@@ -207,6 +207,7 @@ export function PageHeader({ title, description, action, back, as }) {
         <div style={{ minWidth: 0, flex: "1 1 260px" }}>
           <Tag className="hub-ph-title">{title}</Tag>
           {description ? <p className="hub-ph-desc">{description}</p> : null}
+          {meta ? <div className="hub-ph-meta">{meta}</div> : null}
         </div>
         {action ? <div className="hub-actions">{action}</div> : null}
       </div>
@@ -224,6 +225,87 @@ export function EmptyState({ icon = "inbox", title, text, action }) {
       <h3 className="hub-empty-title">{title}</h3>
       {text ? <p className="hub-empty-text">{text}</p> : null}
       {action ? <div style={{ display: "flex", justifyContent: "center" }}>{action}</div> : null}
+    </div>
+  );
+}
+
+// ---------- Dialog ----------
+//
+// One dialog for the whole app: a centred box on a desktop, a sheet that
+// rises from the bottom edge on a phone (the stylesheet decides which).
+// While it is open: focus moves inside and is kept there, Escape closes it,
+// the page behind stops scrolling, and focus goes back to whatever opened
+// it. Anything inside marked data-autofocus gets focus first, otherwise
+// the first control does.
+//
+// `busy` freezes closing while a request is in flight, so a stray Escape
+// cannot hide a save that is still happening.
+const FOCUSABLE = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+// Where Tab should land next inside a dialog. Pure so it can be tested.
+// `current` is -1 when focus is outside the dialog altogether.
+export function nextTrapIndex(shift, current, count) {
+  if (count <= 0) return -1;
+  if (shift) return current <= 0 ? count - 1 : current - 1;
+  return current >= count - 1 ? 0 : current + 1;
+}
+
+export function Modal({ title, onClose, children, footer, busy }) {
+  const titleId = useId();
+  const panel = useRef(null);
+  const closer = useRef(onClose);
+  const frozen = useRef(!!busy);
+  closer.current = onClose;
+  frozen.current = !!busy;
+
+  useEffect(() => {
+    const previous = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const el = panel.current;
+    if (el) {
+      const first = el.querySelector("[data-autofocus]") || el.querySelector(FOCUSABLE);
+      if (first) first.focus();
+    }
+    function onKey(e) {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        if (!frozen.current && closer.current) closer.current();
+        return;
+      }
+      if (e.key !== "Tab" || !panel.current) return;
+      const items = Array.from(panel.current.querySelectorAll(FOCUSABLE));
+      if (items.length === 0) { e.preventDefault(); return; }
+      const at = items.indexOf(document.activeElement);
+      const atEdge = at === -1 || (e.shiftKey && at === 0) || (!e.shiftKey && at === items.length - 1);
+      if (atEdge) {
+        e.preventDefault();
+        items[nextTrapIndex(e.shiftKey, at, items.length)].focus();
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+      if (previous && typeof previous.focus === "function") previous.focus();
+    };
+  }, []);
+
+  return (
+    <div
+      className="hub-modal-backdrop"
+      onMouseDown={(e) => { if (e.target === e.currentTarget && !busy && onClose) onClose(); }}
+    >
+      <div ref={panel} className="hub-modal" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+        <div className="hub-modal-head">
+          <h2 id={titleId} className="hub-modal-title">{title}</h2>
+          <button type="button" className="hub-btn hub-btn--tertiary hub-modal-close" aria-label="Close" disabled={!!busy} onClick={onClose}>
+            <Icon name="x" size={18} />
+          </button>
+        </div>
+        <div className="hub-modal-body">{children}</div>
+        {footer ? <div className="hub-modal-foot">{footer}</div> : null}
+      </div>
     </div>
   );
 }
