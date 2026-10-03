@@ -18,6 +18,9 @@ const ParticipantWelcome = lazy(() => import("./auth/ParticipantWelcome.jsx"));
 const GuardianWelcome = lazy(() => import("./auth/GuardianWelcome.jsx"));
 // BATCH6B-MARKER app-a11y
 import { A11Y_CSS, scrollToTop } from "./lib/a11y.js";
+// BATCH41-MARKER app-ui-foundation
+import { HUB_CSS } from "./lib/hubCss.js";
+import UserMenu from "./components/UserMenu.jsx";
 // BATCH7A-MARKER app-public-route
 import { isApplyPath } from "./lib/application.js";
 const ApplyScreen = lazy(() => import("./public/ApplyScreen.jsx"));
@@ -374,6 +377,7 @@ export default function App() {
     <div style={{ fontFamily: "'Open Sans',Arial,sans-serif", background: B.offWhite, minHeight: "100vh", overflowX: "hidden", paddingLeft: isMobile ? 0 : 248, paddingBottom: isMobile ? 62 : 0 }}>
       <style>{GFONTS}</style>
       <style>{A11Y_CSS}</style>
+      <style>{HUB_CSS}</style>
       <a className="ycdi-skip" href="#ycdi-main">Skip to main content</a>
       <style>{`
         * { box-sizing: border-box; }
@@ -426,7 +430,7 @@ export default function App() {
           </div>
           <div style={{ borderTop: "1px solid " + B.offWhite, padding: "10px 12px" }}>
             {footerItems.map(navRow)}
-            {navRow(signOutItem)}
+            {/* Sign out moved into the header's user menu (Batch 41). */}
             <div style={{ fontSize: 11, color: "#9AA3AF", padding: "8px 10px 2px" }}>YCDI Hub</div>
           </div>
         </aside>
@@ -437,13 +441,12 @@ export default function App() {
           <div style={{ color: B.muted, fontSize: 13 }}>Working together for a generation that makes a difference</div>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
             <NotificationBell onOpen={openFromNotification} isMobile={false} onLight />
-            <button onClick={() => navigateFromDashboard("more", "profile")} aria-label={"My profile, " + profile.full_name} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 9 }}>
-              <Avatar name={profile.full_name} size={32} decorative />
-              <div style={{ textAlign: "left" }}>
-                <div style={{ fontSize: 12.5, color: B.black, fontWeight: 700, fontFamily: "'Montserrat',sans-serif", lineHeight: 1.2 }}>{profile.full_name}</div>
-                <div style={{ fontSize: 11, color: B.muted }}>{roleLine}</div>
-              </div>
-            </button>
+            <UserMenu
+              name={profile.full_name}
+              roleLine={roleLine}
+              onProfile={() => navigateFromDashboard("more", "profile")}
+              onSignOut={signOut}
+            />
           </div>
         </div>
       ) : null}

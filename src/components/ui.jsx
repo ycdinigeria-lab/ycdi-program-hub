@@ -2,6 +2,7 @@ import { useId, cloneElement, isValidElement } from "react";
 import { B, STATUS_CFG } from "../theme.js";
 import { srOnly, liveRegionProps } from "../lib/a11y.js";
 import ycdiCrest from "../assets/ycdi-logo.png";
+import Icon from "./Icon.jsx";
 
 // BATCH6B-MARKER ui-a11y
 //
@@ -38,8 +39,19 @@ export function Avatar({ name, size, decorative }) {
   );
 }
 
-export function Card({ children, style }) {
-  return <div style={{ background: B.white, border: "1px solid " + B.border, borderRadius: 10, padding: "16px 18px", ...(style || {}) }}>{children}</div>;
+// BATCH41-MARKER card-variants
+//
+// With no `variant` this renders exactly as it always did, so the many
+// older screens that use Card needed no edit. A variant switches to the
+// stylesheet classes: surface (white, thin border), elevated (soft shadow),
+// highlight (light blue), attention (light red) or plain (no box at all).
+// `interactive` adds the hover lift for cards that open something.
+export function Card({ children, style, variant, interactive, className, ...rest }) {
+  if (!variant && !interactive && !className) {
+    return <div style={{ background: B.white, border: "1px solid " + B.border, borderRadius: 10, padding: "16px 18px", ...(style || {}) }} {...rest}>{children}</div>;
+  }
+  const cls = ["hub-card", variant && variant !== "surface" ? "hub-card--" + variant : "", interactive ? "hub-card--interactive" : "", className || ""].filter(Boolean).join(" ");
+  return <div className={cls} style={style} {...rest}>{children}</div>;
 }
 
 export function SHead({ children, color, as }) {
@@ -150,9 +162,100 @@ export function Toast({ msg, type }) {
   // Announced as well as shown. A toast that only appears in the corner
   // is invisible to anybody not looking at the corner.
   return (
-    <div {...liveRegionProps(type)} style={{ position: "fixed", bottom: 24, right: 24, background: bg, color: B.white, padding: "12px 20px", borderRadius: 8, fontSize: 13, fontWeight: 600, zIndex: 9999, maxWidth: 360 }}>
+    <div className="hub-toast" {...liveRegionProps(type)} style={{ position: "fixed", bottom: 24, right: 24, background: bg, color: B.white, padding: "12px 20px", borderRadius: 8, fontSize: 13, fontWeight: 600, zIndex: 9999, maxWidth: 360 }}>
       {msg}
     </div>
+  );
+}
+
+// BATCH41-MARKER ui-foundation
+//
+// Shared pieces for the redesigned screens. All of them lean on the
+// classes in lib/hubCss.js, so a screen using them needs that stylesheet
+// to be present (App injects it for everything inside the signed-in shell).
+
+// Four kinds, and only four: primary (the one thing to do), secondary
+// (a neutral alternative), outline (a considered but not final action,
+// such as asking for changes), tertiary (cancel, back), plus danger for
+// the rare destructive one. It is always a real button, never a link
+// dressed up as one.
+export function Button({ variant = "primary", size, block, icon, iconRight, type = "button", className, children, ...rest }) {
+  const cls = ["hub-btn", "hub-btn--" + variant, size === "sm" ? "hub-btn--sm" : "", block ? "hub-btn--block" : "", className || ""].filter(Boolean).join(" ");
+  return (
+    <button type={type} className={cls} {...rest}>
+      {icon ? <Icon name={icon} size={16} /> : null}
+      {children}
+      {iconRight ? <Icon name={iconRight} size={16} /> : null}
+    </button>
+  );
+}
+
+// A heading for the top of a screen: title, one line of context, and the
+// primary action on the right. `back` adds a quiet way out above it.
+// Defaults to h2 because the shell already prints an h1 for the section.
+export function PageHeader({ title, description, action, back, as }) {
+  const Tag = as || "h2";
+  return (
+    <div>
+      {back ? (
+        <button type="button" className="hub-back" onClick={back.onClick}>
+          <Icon name="arrowLeft" size={15} />
+          {back.label}
+        </button>
+      ) : null}
+      <div className="hub-ph">
+        <div style={{ minWidth: 0, flex: "1 1 260px" }}>
+          <Tag className="hub-ph-title">{title}</Tag>
+          {description ? <p className="hub-ph-desc">{description}</p> : null}
+        </div>
+        {action ? <div className="hub-actions">{action}</div> : null}
+      </div>
+    </div>
+  );
+}
+
+// One component for "nothing here", whether that is a good thing (all
+// caught up) or just an empty list. The icon is decoration; the title and
+// text carry the meaning.
+export function EmptyState({ icon = "inbox", title, text, action }) {
+  return (
+    <div className="hub-empty">
+      <div className="hub-empty-icon"><Icon name={icon} size={24} /></div>
+      <h3 className="hub-empty-title">{title}</h3>
+      {text ? <p className="hub-empty-text">{text}</p> : null}
+      {action ? <div style={{ display: "flex", justifyContent: "center" }}>{action}</div> : null}
+    </div>
+  );
+}
+
+// A grey block that stands in for content on its way. Hidden from screen
+// readers individually; wrap a group in SkeletonRegion so they hear one
+// "Loading" instead of silence.
+export function Skeleton({ w = "100%", h = 14, style }) {
+  return <span aria-hidden="true" className="hub-skel" style={{ width: w, height: h, ...(style || {}) }} />;
+}
+
+export function SkeletonRegion({ label = "Loading", children }) {
+  return (
+    <div role="status" aria-busy="true" aria-label={label}>
+      {children}
+    </div>
+  );
+}
+
+// A ready-made loading card for lists: a title line, a smaller line, and a
+// row of three short figures.
+export function SkeletonCard() {
+  return (
+    <Card variant="surface">
+      <Skeleton w="55%" h={16} />
+      <div style={{ height: 8 }} />
+      <Skeleton w="35%" h={12} />
+      <div style={{ height: 18 }} />
+      <div style={{ display: "flex", gap: 16 }}>
+        <Skeleton w={70} h={12} /><Skeleton w={90} h={12} /><Skeleton w={60} h={12} />
+      </div>
+    </Card>
   );
 }
 
